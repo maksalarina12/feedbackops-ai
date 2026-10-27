@@ -91,3 +91,8 @@ feedbackops-ai/
 ├── samples/synthetic_feedback.json
 └── frontend/                    # Next.js demo UI
 ```
+
+## Presenting it?
+
+Head straight to **[DEMO.md](DEMO.md)** — the interview-day playbook: video
+plan, 2-minute live checklist, safe-vs-risky claims.
