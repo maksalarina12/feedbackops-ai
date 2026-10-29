@@ -1,0 +1,13 @@
+# Minimal TLS reverse proxy for a single-host deployment.
+# Point DNS for this hostname at the server, then run Caddy in front of the
+# frontend service. Do not expose n8n publicly; reach its editor over SSH.
+feedbackops.example.com {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+	reverse_proxy frontend:3000
+}

@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env*.example
 
 # Python
 __pycache__/
@@ -23,6 +24,9 @@ build/
 .DS_Store
 .idea/
 .vscode/
+
+# Local demo audit store
+.data/
 
 # Logs
 *.log

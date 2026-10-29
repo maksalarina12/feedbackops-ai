@@ -1,0 +1,62 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.45.4
+    container_name: feedbackops-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - GENERIC_TIMEZONE=Asia/Jakarta
+      - TZ=Asia/Jakarta
+      # Required for optional escalation/digest URLs read via $env
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      # Required for the optional HMAC audit branch (require('crypto') in a Code node)
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto
+      - ESCALATION_WEBHOOK_URL=${ESCALATION_WEBHOOK_URL:-}
+      - AUDIT_WEBHOOK_URL=${AUDIT_WEBHOOK_URL:-http://frontend:3000/api/audit}
+      - AUDIT_HMAC_SECRET=${AUDIT_HMAC_SECRET:-}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - N8N_BASE_URL=http://n8n:5678
+    volumes:
+      - n8n_data:/home/node/.n8n
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  frontend:
+    build: ./frontend
+    container_name: feedbackops-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - N8N_WEBHOOK_URL=http://n8n:5678/webhook/feedbackops
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:?Set WEBHOOK_SECRET in .env}
+      - AUDIT_DB_PATH=${AUDIT_DB_PATH:-/app/.data/audit.sqlite}
+      - AUDIT_LOG_PATH=${AUDIT_LOG_PATH:-/app/.data/audit.jsonl}
+      - AUDIT_HMAC_SECRET=${AUDIT_HMAC_SECRET:-}
+      - AUDIT_RETENTION_DAYS=${AUDIT_RETENTION_DAYS:-}
+      - REVIEW_USERS=${REVIEW_USERS:-}
+      - REVIEW_PASSWORD=${REVIEW_PASSWORD:-}
+      - REVIEW_SESSION_SECRET=${REVIEW_SESSION_SECRET:-}
+    volumes:
+      - frontend_data:/app/.data
+    depends_on:
+      n8n:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  n8n_data:
+  frontend_data:

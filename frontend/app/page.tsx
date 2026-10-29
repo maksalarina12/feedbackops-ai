@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 
 type Severity = "normal" | "high_priority" | "review";
@@ -92,7 +93,7 @@ export default function Home() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch("http://localhost:5678/webhook/feedbackops", {
+      const res = await fetch("/api/triage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -106,7 +107,7 @@ export default function Home() {
       requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth" }));
     } catch {
       setError(
-        "Cannot reach the n8n webhook. Is the n8n container running on localhost:5678?"
+        "Cannot reach the triage service. Check the server-side proxy and n8n."
       );
     } finally {
       setLoading(false);
@@ -117,18 +118,26 @@ export default function Home() {
 
   return (
     <main style={{ maxWidth: 720, margin: "40px auto", padding: "0 20px" }}>
-      <header style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 26, marginBottom: 4 }}>
-          FeedbackOps AI{" "}
-          <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 400 }}>
-            demo
-          </span>
-        </h1>
-        <p style={{ color: "#4b5563", fontSize: 14, lineHeight: 1.5, marginTop: 0 }}>
-          Intelligent customer feedback triage and routing. LLM classifies,
-          deterministic rules route — consequential data always lands in a review
-          queue, never silently passed.
-        </p>
+      <header style={{ marginBottom: 28, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        <div>
+          <h1 style={{ fontSize: 26, marginBottom: 4 }}>
+            FeedbackOps AI{" "}
+            <span style={{ color: "#6b7280", fontSize: 14, fontWeight: 400 }}>
+              demo
+            </span>
+          </h1>
+          <p style={{ color: "#4b5563", fontSize: 14, lineHeight: 1.5, marginTop: 0 }}>
+            Intelligent customer feedback triage and routing. LLM classifies,
+            deterministic rules route — consequential data always lands in a review
+            queue, never silently passed.
+          </p>
+        </div>
+        <Link
+          href="/review"
+          style={{ color: "#101318", fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 12px", whiteSpace: "nowrap" }}
+        >
+          Review queue &rarr;
+        </Link>
       </header>
 
       <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 18 }}>
@@ -249,9 +258,10 @@ export default function Home() {
 
       <footer style={{ marginTop: 32, color: "#9ca3af", fontSize: 11, lineHeight: 1.6 }}>
         Demo prototype. Synthetic feedback only — this form never sends real
-        customer data. Suggested responses are drafts; a review flag routes to a
-        human queue. Audit log: n8n execution log (Google Sheets pending
-        credentials). Webhook runs locally on http://localhost:5678.
+        customer data. Suggested responses are drafts; a review flag keeps the
+        item open in the review queue. Audit rows persist to a local SQLite demo
+        store and are protected by reviewer sign-in. Browser requests go through a server-side proxy; the webhook
+        secret is never exposed to the client.
       </footer>
     </main>
   );

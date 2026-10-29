@@ -2,7 +2,7 @@
   "name": "FeedbackOps AI - Feedback Triage",
   "nodes": [
     {
-      "id": "42d9005f-ffd1-4e25-89df-dd6ad9fb98c7",
+      "id": "aae79ef6-1aeb-435c-b359-72dbd3b478af",
       "name": "Feedback Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -10,17 +10,24 @@
         -160,
         240
       ],
-      "webhookId": "83794933-6fa9-4372-b657-187cdb208b6f",
+      "webhookId": "9edfeced-976c-4bda-a88f-02a96d63b620",
       "parameters": {
         "httpMethod": "POST",
         "path": "feedbackops",
         "responseMode": "responseNode",
+        "authentication": "headerAuth",
         "options": {}
       },
-      "notes": "Entry point. POST JSON: {feedback, source?, request_id?}. URL alone is weak auth; shared-secret validation is listed as a production hardening step."
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_WEBHOOK_CRED_ID",
+          "name": "FeedbackOps Webhook Auth"
+        }
+      },
+      "notes": "Entry point. POST JSON: {feedback, source?, request_id?}. Requires the X-Webhook-Secret header configured in the webhook Header Auth credential."
     },
     {
-      "id": "335e9af9-7800-4fd4-9c5e-e59872215451",
+      "id": "f5b725ee-abc0-4c97-ae0f-b3973f6b12b2",
       "name": "Validate & Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -33,7 +40,7 @@
       }
     },
     {
-      "id": "bfbf6766-1591-497f-a17a-bb0938bbb469",
+      "id": "a1678b35-256b-42aa-afea-d30c99f7179b",
       "name": "Input Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -66,7 +73,7 @@
       }
     },
     {
-      "id": "bd4a9661-7c97-476a-b0cb-b52ee23a690a",
+      "id": "a0cb8162-a74a-4b8d-94cb-ae4ca56ccaad",
       "name": "Gemini Classify",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -88,7 +95,7 @@
       },
       "credentials": {
         "httpHeaderAuth": {
-          "id": "3WzIotyGCA4ybhwZ",
+          "id": "REPLACE_WITH_GEMINI_CRED_ID",
           "name": "Gemini API (header auth)"
         }
       },
@@ -97,7 +104,7 @@
       "notes": "LLM adapter. Provider-agnostic at the boundary: same shape (text in -> validated JSON out) works for the Claude adapter."
     },
     {
-      "id": "95fe0199-3afb-46e7-a509-03b9c91c75a8",
+      "id": "267f5840-173c-4cd4-9648-ed9dd6ac850c",
       "name": "Validate LLM Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -111,7 +118,7 @@
       "notes": "Second layer of defense: responseSchema enforcement is NOT enough; enums are re-checked here (models do drift)."
     },
     {
-      "id": "5ba311e5-05a6-4f9f-abe0-81869eafbb03",
+      "id": "cdc38521-96a4-4b6a-bd4a-4fd756bd7fff",
       "name": "Deterministic Routing",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -125,7 +132,7 @@
       "notes": "The LLM proposes; THIS node disposes. Business rules live here only."
     },
     {
-      "id": "424fe3a5-da7c-4d5b-8cd7-d349fe91f61e",
+      "id": "8f9180d2-9ecf-4152-8afa-cecbe0574501",
       "name": "Build Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -134,11 +141,202 @@
         140
       ],
       "parameters": {
-        "jsCode": "// Build the structured success response for the caller.\nconst i = $json;\nreturn [{ json: {\n  final_response: {\n    success: true,\n    request_id: i.request_id,\n    result: i.result,\n    routing_decision: i.routing_decision,\n    review_required: i.review_required,\n    suggested_response: i.suggested_response,\n    llm: { provider: 'gemini', model: 'gemini-3.5-flash', llm_error: i.llm_error },\n    processing_duration_ms: i.duration_ms,\n    error: null,\n  },\n}}];\n"
+        "jsCode": "// Build the structured success response for the caller.\nconst i = $json;\nreturn [{ json: {\n  ...i,\n  final_response: {\n    success: true,\n    request_id: i.request_id,\n    result: i.result,\n    routing_decision: i.routing_decision,\n    review_required: i.review_required,\n    suggested_response: i.suggested_response,\n    llm: { provider: 'gemini', model: 'gemini-3.5-flash', llm_error: i.llm_error },\n    processing_duration_ms: i.duration_ms,\n    error: null,\n  },\n}}];\n"
       }
     },
     {
-      "id": "73683103-b42f-4301-903e-462e7663fe56",
+      "id": "7bf40dfa-2313-4770-b876-77420e32706b",
+      "name": "Prepare Escalation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        380
+      ],
+      "parameters": {
+        "jsCode": "// Optional escalation hand-off. Disabled unless ESCALATION_WEBHOOK_URL is set.\n// Runs on a side branch so the caller's response never depends on it.\nlet url = '';\ntry {\n  url = (typeof $env !== 'undefined' && $env.ESCALATION_WEBHOOK_URL)\n    ? String($env.ESCALATION_WEBHOOK_URL).trim()\n    : '';\n} catch (e) {\n  url = '';\n}\nconst i = $json;\nreturn [{ json: {\n  ...i,\n  escalation_enabled: url !== '' && i.routing_decision !== 'normal',\n  escalation_url: url,\n}}];\n"
+      },
+      "notes": "Side branch only. Escalation is opt-in via ESCALATION_WEBHOOK_URL and cannot change the triage response."
+    },
+    {
+      "id": "7441e56f-f53f-4972-9ce9-b823c208c142",
+      "name": "Escalation Needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        380
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-escalate",
+              "leftValue": "={{ $json.escalation_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "ee69c8b8-7215-429c-8d6a-003c7f1c2ede",
+      "name": "Notify Escalation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1632,
+        380
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.escalation_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ request_id: $json.request_id, routing_decision: $json.routing_decision, result: $json.result, source: $json.source, received_at: $json.received_at }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_WEBHOOK_CRED_ID",
+          "name": "FeedbackOps Webhook Auth"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Fire-and-forget hand-off to the escalation workflow. A failure here never affects triage."
+    },
+    {
+      "id": "5f2ba888-6270-4826-a8b9-7cc116c3f8d0",
+      "name": "Escalation Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        380
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "2faa9ca5-a005-4858-8dea-06adf83484e2",
+      "name": "Prepare Audit Persist",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        620
+      ],
+      "parameters": {
+        "jsCode": "// Optional persistent audit hand-off. Disabled unless AUDIT_WEBHOOK_URL is set.\n// Side branch only: persistence failures never change the triage response.\nlet url = '';\nlet hmacSecret = '';\ntry {\n  url = (typeof $env !== 'undefined' && $env.AUDIT_WEBHOOK_URL)\n    ? String($env.AUDIT_WEBHOOK_URL).trim()\n    : '';\n  hmacSecret = (typeof $env !== 'undefined' && $env.AUDIT_HMAC_SECRET)\n    ? String($env.AUDIT_HMAC_SECRET).trim()\n    : '';\n} catch (e) {\n  url = '';\n  hmacSecret = '';\n}\nconst i = $json;\nconst raw = i.audit_row ? JSON.stringify(i.audit_row) : '';\nconst timestamp = String(Date.now());\nlet signature = '';\nif (hmacSecret && raw) {\n  const nodeCrypto = require('crypto');\n  signature = nodeCrypto\n    .createHmac('sha256', hmacSecret)\n    .update(timestamp + '.' + raw)\n    .digest('hex');\n}\nreturn [{ json: {\n  ...i,\n  audit_persist_enabled: url !== '' && !!raw,\n  audit_persist_url: url,\n  audit_persist_body: raw,\n  audit_hmac_timestamp: signature ? timestamp : '',\n  audit_hmac_signature: signature,\n}}];\n"
+      },
+      "notes": "Side branch. Persists the audit row to the frontend review queue when AUDIT_WEBHOOK_URL is set."
+    },
+    {
+      "id": "162b5f72-b2f0-4364-89b4-ddc2be32c4b1",
+      "name": "Audit Persist Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1632,
+        620
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-audit-persist",
+              "leftValue": "={{ $json.audit_persist_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "d3c88c86-18e0-4c8c-9830-e150d2e42579",
+      "name": "Persist Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1856,
+        620
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.audit_persist_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.audit_persist_body }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Audit-Timestamp",
+              "value": "={{ $json.audit_hmac_timestamp }}"
+            },
+            {
+              "name": "X-Audit-Signature",
+              "value": "={{ $json.audit_hmac_signature }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_WEBHOOK_CRED_ID",
+          "name": "FeedbackOps Webhook Auth"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true,
+      "notes": "Fire-and-forget audit persistence to /api/audit. Failures are logged, never surfaced to the caller."
+    },
+    {
+      "id": "9e55b308-5680-4e6e-94c8-b5ff9a609fe7",
+      "name": "Audit Persisted",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        620
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "02bb3194-5b61-4792-847a-89f41a9fda24",
       "name": "Build Error Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -151,7 +349,7 @@
       }
     },
     {
-      "id": "c28ff721-ce59-479c-8550-05c4e272d649",
+      "id": "1b218e35-a362-41b1-86f2-316a0b558cc7",
       "name": "Audit Log (local)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -160,11 +358,11 @@
         240
       ],
       "parameters": {
-        "jsCode": "// Audit trail (local fallback): one JSON line per execution in n8n's own log.\n// Google Sheets path is documented in WORKFLOW_GUIDE.md and added only after\n// real credentials exist; until then this is the explicit fallback.\nconst i = $json;\nlet row;\nif (!i.final_response) {\n  row = { request_id: i.request_id, status: 'unknown_state', created_at: new Date().toISOString() };\n} else if (i.final_response.success === false) {\n  row = {\n    request_id: i.final_response.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    status: 'rejected_pre_llm',\n    error_code: i.final_response.error.code,\n  };\n} else {\n  const f = i.final_response;\n  row = {\n    request_id: f.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    sentiment: (f.result || {}).sentiment,\n    category: (f.result || {}).category,\n    urgency: (f.result || {}).urgency,\n    summary: (f.result || {}).summary,\n    routing_decision: f.routing_decision,\n    review_status: f.review_required ? 'needs_review' : 'auto',\n    llm_error: (f.llm || {}).llm_error,\n    processing_duration_ms: f.processing_duration_ms,\n  };\n}\nconsole.log('[AUDIT] ' + JSON.stringify(row));\nreturn [{ json: { ...i, audit_row: row } }];\n"
+        "jsCode": "// Build the audit row once, log it locally, and let the adjacent side branch\n// persist it to the review queue when AUDIT_WEBHOOK_URL is configured.\n// Keep this shape stable: the store and dashboard depend on it.\nconst i = $json;\nlet row;\nif (!i.final_response) {\n  row = { request_id: i.request_id, status: 'unknown_state', created_at: new Date().toISOString() };\n} else if (i.final_response.success === false) {\n  row = {\n    request_id: i.final_response.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    status: 'rejected_pre_llm',\n    error_code: i.final_response.error.code,\n  };\n} else {\n  const f = i.final_response;\n  row = {\n    request_id: f.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    sentiment: (f.result || {}).sentiment,\n    category: (f.result || {}).category,\n    urgency: (f.result || {}).urgency,\n    summary: (f.result || {}).summary,\n    routing_decision: f.routing_decision,\n    review_status: f.review_required ? 'needs_review' : 'auto',\n    llm_error: (f.llm || {}).llm_error,\n    processing_duration_ms: f.processing_duration_ms,\n  };\n}\nconsole.log('[AUDIT] ' + JSON.stringify(row));\nreturn [{ json: { ...i, audit_row: row } }];\n"
       }
     },
     {
-      "id": "70f2dc12-c335-4838-ba83-905af1736ba5",
+      "id": "aea128d7-04d0-433d-96ed-0ca461e274c5",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
@@ -174,15 +372,7 @@
       ],
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ $json.final_response }}",
-        "responseHeaders": {
-          "entries": [
-            {
-              "name": "Access-Control-Allow-Origin",
-              "value": "*"
-            }
-          ]
-        }
+        "responseBody": "={{ $json.final_response }}"
       }
     }
   ],
@@ -256,6 +446,45 @@
             "node": "Build Success Response",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Prepare Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Escalation": {
+      "main": [
+        [
+          {
+            "node": "Escalation Needed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Escalation Needed?": {
+      "main": [
+        [
+          {
+            "node": "Notify Escalation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Notify Escalation": {
+      "main": [
+        [
+          {
+            "node": "Escalation Done",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -287,6 +516,45 @@
         [
           {
             "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare Audit Persist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Audit Persist": {
+      "main": [
+        [
+          {
+            "node": "Audit Persist Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit Persist Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Persist Audit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Persist Audit": {
+      "main": [
+        [
+          {
+            "node": "Audit Persisted",
             "type": "main",
             "index": 0
           }

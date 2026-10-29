@@ -1,0 +1,422 @@
+[
+  {
+    "label": "high billing",
+    "input": {
+      "request_id": "high-billing",
+      "result": {
+        "sentiment": "negative",
+        "category": "billing",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "high technical",
+    "input": {
+      "request_id": "high-technical",
+      "result": {
+        "sentiment": "negative",
+        "category": "technical_issue",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "high shipping",
+    "input": {
+      "request_id": "high-shipping",
+      "result": {
+        "sentiment": "mixed",
+        "category": "shipping",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "high product",
+    "input": {
+      "request_id": "high-product",
+      "result": {
+        "sentiment": "neutral",
+        "category": "product_quality",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "high support",
+    "input": {
+      "request_id": "high-support",
+      "result": {
+        "sentiment": "negative",
+        "category": "customer_support",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "high with unknown category",
+    "input": {
+      "request_id": "high-with-unknown-category",
+      "result": {
+        "sentiment": "negative",
+        "category": "unknown",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "high with unknown sentiment",
+    "input": {
+      "request_id": "high-with-unknown-sentiment",
+      "result": {
+        "sentiment": "unknown",
+        "category": "billing",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "llm error beats high urgency",
+    "input": {
+      "request_id": "llm-error-beats-high-urgency",
+      "result": {
+        "sentiment": "negative",
+        "category": "billing",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": "provider_timeout"
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "llm error low urgency",
+    "input": {
+      "request_id": "llm-error-low-urgency",
+      "result": {
+        "sentiment": "positive",
+        "category": "general",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": "unparseable_llm_json"
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "unknown urgency",
+    "input": {
+      "request_id": "unknown-urgency",
+      "result": {
+        "sentiment": "neutral",
+        "category": "shipping",
+        "urgency": "unknown",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "unknown category",
+    "input": {
+      "request_id": "unknown-category",
+      "result": {
+        "sentiment": "negative",
+        "category": "unknown",
+        "urgency": "medium",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "unknown sentiment",
+    "input": {
+      "request_id": "unknown-sentiment",
+      "result": {
+        "sentiment": "unknown",
+        "category": "billing",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "all unknown",
+    "input": {
+      "request_id": "all-unknown",
+      "result": {
+        "sentiment": "unknown",
+        "category": "unknown",
+        "urgency": "unknown",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "normal low positive",
+    "input": {
+      "request_id": "normal-low-positive",
+      "result": {
+        "sentiment": "positive",
+        "category": "general",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "normal low neutral",
+    "input": {
+      "request_id": "normal-low-neutral",
+      "result": {
+        "sentiment": "neutral",
+        "category": "shipping",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "normal medium positive",
+    "input": {
+      "request_id": "normal-medium-positive",
+      "result": {
+        "sentiment": "positive",
+        "category": "product_quality",
+        "urgency": "medium",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "normal medium negative",
+    "input": {
+      "request_id": "normal-medium-negative",
+      "result": {
+        "sentiment": "negative",
+        "category": "technical_issue",
+        "urgency": "medium",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "normal billing",
+    "input": {
+      "request_id": "normal-billing",
+      "result": {
+        "sentiment": "negative",
+        "category": "billing",
+        "urgency": "medium",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "normal support",
+    "input": {
+      "request_id": "normal-support",
+      "result": {
+        "sentiment": "mixed",
+        "category": "customer_support",
+        "urgency": "medium",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "normal mixed low",
+    "input": {
+      "request_id": "normal-mixed-low",
+      "result": {
+        "sentiment": "mixed",
+        "category": "general",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "llm error unknown fields",
+    "input": {
+      "request_id": "llm-error-unknown-fields",
+      "result": {
+        "sentiment": "unknown",
+        "category": "unknown",
+        "urgency": "unknown",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": "enum_violation_urgency"
+    },
+    "expected_route": "review"
+  },
+  {
+    "label": "llm error empty string",
+    "input": {
+      "request_id": "llm-error-empty-string",
+      "result": {
+        "sentiment": "positive",
+        "category": "general",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": ""
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "high support mixed",
+    "input": {
+      "request_id": "high-support-mixed",
+      "result": {
+        "sentiment": "mixed",
+        "category": "customer_support",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "low technical",
+    "input": {
+      "request_id": "low-technical",
+      "result": {
+        "sentiment": "negative",
+        "category": "technical_issue",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "medium shipping",
+    "input": {
+      "request_id": "medium-shipping",
+      "result": {
+        "sentiment": "neutral",
+        "category": "shipping",
+        "urgency": "medium",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "low billing",
+    "input": {
+      "request_id": "low-billing",
+      "result": {
+        "sentiment": "negative",
+        "category": "billing",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "high unknown all",
+    "input": {
+      "request_id": "high-unknown-all",
+      "result": {
+        "sentiment": "unknown",
+        "category": "unknown",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "normal product low",
+    "input": {
+      "request_id": "normal-product-low",
+      "result": {
+        "sentiment": "positive",
+        "category": "product_quality",
+        "urgency": "low",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "normal"
+  },
+  {
+    "label": "unknown sentiment high",
+    "input": {
+      "request_id": "unknown-sentiment-high",
+      "result": {
+        "sentiment": "unknown",
+        "category": "technical_issue",
+        "urgency": "high",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "high_priority"
+  },
+  {
+    "label": "unknown urgency medium",
+    "input": {
+      "request_id": "unknown-urgency-medium",
+      "result": {
+        "sentiment": "positive",
+        "category": "general",
+        "urgency": "unknown",
+        "summary": "synthetic evaluation case"
+      },
+      "llm_error": null
+    },
+    "expected_route": "review"
+  }
+]

@@ -29,6 +29,7 @@ import os
 
 KEY = os.environ.get("N8N_API_KEY", "")
 WF_ID = os.environ.get("N8N_WORKFLOW_ID", "")
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "")
 WEBHOOK = BASE + "/webhook/feedbackops"
 REAL_MODEL_URL = "gemini-3.5-flash:generateContent"
 MODEL_URL_PREFIX = "https://generativelanguage.googleapis.com/v1beta/models/"
@@ -51,11 +52,14 @@ def api(method, path, body=None):
         return {"_http_error": e.code, "body": e.read().decode()[:500]}
 
 
-def post_webhook(payload):
+def post_webhook(payload, include_secret=True):
+    headers = {"Content-Type": "application/json"}
+    if WEBHOOK_SECRET and include_secret:
+        headers["X-Webhook-Secret"] = WEBHOOK_SECRET
     req = urllib.request.Request(
         WEBHOOK,
         data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
+        headers=headers,
         method="POST",
     )
     try:
@@ -182,6 +186,17 @@ def run_phase(phase):
         check(name, r, exp)
 
 
+def run_auth_check():
+    if not WEBHOOK_SECRET:
+        print("SKIP - auth check (WEBHOOK_SECRET not set)")
+        return
+    status, _ = post_webhook(
+        {"feedback": "auth probe, should never be classified", "request_id": uuid.uuid4().hex[:12]},
+        include_secret=False,
+    )
+    check("auth missing webhook secret -> 403", {"status": status}, {"status": 403})
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--full", action="store_true", help="also run mock-provider phase (restores state)")
@@ -193,6 +208,7 @@ def main():
 
     print(f"== FEEDBACKOPS AI TEST SUITE ({'live' if not args.full else 'live+mock'}) ==")
     run_phase("live")
+    run_auth_check()
 
     if args.full:
         proc = subprocess.Popen(

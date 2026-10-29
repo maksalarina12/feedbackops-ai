@@ -18,9 +18,16 @@
    the validator would have caught casing/schema drift anyway.")
 6. (2:30) Submit the **empty feedback** example → instant rejection (18 ms),
    "input never reached the AI — zero tokens spent".
-7. (3:00) Show the executions list + `[AUDIT]` line (request_id threading).
-8. (3:20) Close with architecture trade-offs and next steps (Sheets bank,
-   production auth, Postgres dedupe). Never claim live Sheets.
+7. (3:00) Show the executions list + `[AUDIT]` line (request_id threading),
+   then open `/review` and sign in. The same request is waiting in the
+   persistent SQLite queue. Mark it resolved and point out that the audit row
+   itself was not rewritten.
+8. (3:20) Mention the security boundary: the browser calls a same-origin
+   Next.js proxy, which adds the `X-Webhook-Secret` header server-side; a
+   request without it gets HTTP 403 before validation. `/review` has its own
+   login and signed session cookie. Close with trade-offs and next steps
+   (Postgres for multi-instance, distributed rate limiting, per-reviewer
+   accounts, durable dedupe). Never claim live Sheets or a production database.
 
 Contingency: if Gemini throttles during recording, capture the
 **fallback state** on purpose: "this is the rate-limit path — see, the
@@ -55,9 +62,15 @@ the response is still truthfully success-with-review, carrying the error.
 Every request has an ID that flows through validation, the model call, and the
 audit log.
 
-I'd extend this same pattern in production: persistent audit trail, a real
-human-review UI, durable dedupe, and an optional microservice if the routing
-rules grow beyond what visual workflow nodes can express."
+Audit rows are persisted to a SQLite-backed review queue, so a high-priority
+item cannot disappear into a log file; a reviewer signs in, opens /review, and
+marks it resolved, and that action is appended as an event instead of
+overwriting history. Sensitive fields are redacted before storage.
+
+I'd extend this same pattern in production: replace SQLite with Postgres, use a
+shared rate limiter and per-reviewer accounts, add durable dedupe, and extract a
+microservice only if the routing rules grow beyond what visual workflow nodes
+can express."
 
 ## Business value (methodology, not invented numbers)
 

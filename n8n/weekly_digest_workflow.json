@@ -1,0 +1,224 @@
+{
+  "name": "FeedbackOps AI - Weekly Digest",
+  "nodes": [
+    {
+      "id": "886b55ed-c873-4af1-b4a4-0a360e1adf3a",
+      "name": "Weekly Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * 1"
+            }
+          ]
+        }
+      },
+      "notes": "Every Monday at 08:00 in the instance timezone."
+    },
+    {
+      "id": "f7fca2cc-eda3-4f0e-92c0-db553347ee1f",
+      "name": "Prepare Digest Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        240
+      ],
+      "parameters": {
+        "jsCode": "// Resolve the n8n base URL without relying on $env in an expression.\nlet base = 'http://localhost:5678';\ntry {\n  if (typeof $env !== 'undefined' && $env.N8N_BASE_URL) {\n    base = String($env.N8N_BASE_URL).trim();\n  }\n} catch (e) {\n  base = 'http://localhost:5678';\n}\nreturn [{ json: { base_url: base.replace(/\\/$/, '') } }];\n"
+      }
+    },
+    {
+      "id": "de598963-fbb0-4c98-8b87-c93ed60f9088",
+      "name": "Fetch Executions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        240
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.base_url + '/api/v1/executions?limit=250' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_N8N_API_CRED_ID",
+          "name": "n8n API (header auth)"
+        }
+      },
+      "notes": "Header Auth credential: X-N8N-API-KEY = your n8n API key."
+    },
+    {
+      "id": "c8e19bbc-6fb0-4580-bacc-742b73faf9de",
+      "name": "Build Digest",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        240
+      ],
+      "parameters": {
+        "jsCode": "// Aggregate the last 7 days of n8n executions. No LLM needed for counts.\nconst payload = $json || {};\nconst items = Array.isArray(payload.data) ? payload.data : (Array.isArray(payload) ? payload : []);\nconst now = Date.now();\nconst windowMs = 7 * 24 * 60 * 60 * 1000;\nconst recent = items.filter((e) => {\n  const t = Date.parse(e.startedAt || e.createdAt || e.stoppedAt || '');\n  return Number.isFinite(t) && now - t <= windowMs;\n});\n\nconst statusOf = (e) => (e.status || 'unknown').toLowerCase();\nconst success = recent.filter((e) => statusOf(e) === 'success').length;\nconst failed = recent.filter((e) => ['error', 'crashed', 'failed'].includes(statusOf(e))).length;\nconst running = recent.filter((e) => statusOf(e) === 'running').length;\n\nconst durations = recent\n  .map((e) => {\n    const start = Date.parse(e.startedAt || e.createdAt || '');\n    const stop = Date.parse(e.stoppedAt || '');\n    return Number.isFinite(start) && Number.isFinite(stop) ? stop - start : null;\n  })\n  .filter((d) => d !== null && d >= 0);\nconst avgMs = durations.length\n  ? Math.round(durations.reduce((sum, d) => sum + d, 0) / durations.length)\n  : null;\n\nconst rate = recent.length ? Math.round((success / recent.length) * 1000) / 10 : null;\n\nlet slackUrl = '';\ntry {\n  slackUrl = (typeof $env !== 'undefined' && $env.SLACK_WEBHOOK_URL)\n    ? String($env.SLACK_WEBHOOK_URL).trim()\n    : '';\n} catch (e) {\n  slackUrl = '';\n}\n\nconst text = [\n  ':bar_chart: *FeedbackOps weekly digest*',\n  `window: last 7 days`,\n  `executions: ${recent.length}`,\n  `success: ${success} | failed: ${failed} | running: ${running}`,\n  `success rate: ${rate === null ? 'n/a' : rate + '%'}`,\n  `avg duration: ${avgMs === null ? 'n/a' : avgMs + ' ms'}`,\n].join('\\n');\n\nreturn [{ json: {\n  window_days: 7,\n  total: recent.length,\n  success,\n  failed,\n  running,\n  success_rate_percent: rate,\n  avg_duration_ms: avgMs,\n  slack_enabled: slackUrl !== '',\n  slack_url: slackUrl,\n  text,\n}}];\n"
+      }
+    },
+    {
+      "id": "f3df23d3-01d0-4e54-97fe-21c62950e88c",
+      "name": "Digest Slack Enabled?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        240
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-digest-slack",
+              "leftValue": "={{ $json.slack_enabled }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "63d1b728-95e7-4e0e-83a1-6a196c76006b",
+      "name": "Post Digest to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        140
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.slack_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "9854cd77-5d4d-44f4-afbc-0de8099d6cca",
+      "name": "Digest Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        240
+      ],
+      "parameters": {
+        "jsCode": "const i = $json;\nconst row = {\n  generated_at: new Date().toISOString(),\n  window_days: i.window_days,\n  total: i.total,\n  success: i.success,\n  failed: i.failed,\n  success_rate_percent: i.success_rate_percent,\n  channel: i.slack_enabled ? 'slack' : 'none',\n};\nconsole.log('[DIGEST] ' + JSON.stringify(row));\nreturn [{ json: row }];\n"
+      }
+    }
+  ],
+  "connections": {
+    "Weekly Schedule": {
+      "main": [
+        [
+          {
+            "node": "Prepare Digest Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Digest Request": {
+      "main": [
+        [
+          {
+            "node": "Fetch Executions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Executions": {
+      "main": [
+        [
+          {
+            "node": "Build Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Digest": {
+      "main": [
+        [
+          {
+            "node": "Digest Slack Enabled?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Digest Slack Enabled?": {
+      "main": [
+        [
+          {
+            "node": "Post Digest to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Digest Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Digest to Slack": {
+      "main": [
+        [
+          {
+            "node": "Digest Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

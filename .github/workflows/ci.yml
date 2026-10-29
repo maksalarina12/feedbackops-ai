@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate workflows and repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compile scripts
+        run: python -m compileall -q scripts
+      - name: Validate repository
+        run: python scripts/validate_repo.py
+      - name: Test routing rules
+        run: node scripts/test_routing.mjs
+      - name: Test audit store
+        run: node scripts/test_audit_store.mjs
+      - name: Evaluate routing policy
+        run: node scripts/evaluate_policy.mjs
+
+  frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Test API integration
+        run: node ../scripts/test_api.mjs

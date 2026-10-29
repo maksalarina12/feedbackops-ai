@@ -1,0 +1,13 @@
+{
+  "generated_at": "2026-10-29T06:01:09.977Z",
+  "total": 30,
+  "passed": 30,
+  "failed": 0,
+  "accuracy": 1,
+  "routes": {
+    "high_priority": 10,
+    "normal": 12,
+    "review": 8
+  },
+  "failures": []
+}
