@@ -98,8 +98,27 @@ without inventing operational numbers.
 - **Authenticated review queue** — `/review` requires a signed HttpOnly session;
   items stay open until a reviewer resolves them, and actions append events
   instead of rewriting history.
-- **Abuse controls** — per-IP rate limits on triage, audit, review, and login;
-  optional HMAC + timestamp verification for `/api/audit`.
+- **Abuse controls** — per-IP rate limits on triage, audit, review, login, and
+  Slack callbacks; optional HMAC + timestamp verification for `/api/audit`.
+- **Explainable routing** — every decision ships with `routing_reasons`
+  ("urgency=high -> high-priority review queue"), surfaced in the UI and the
+  audit trail, so a reviewer can audit the rule that fired.
+- **Unit routing (holding pattern)** — an optional `unit` field tags feedback
+  for a subsidiary; `/review` filters per unit while the group audit trail
+  stays unified.
+- **KB-grounded suggestions (mini-RAG)** — deterministic keyword retrieval over
+  an embedded knowledge base grounds suggested responses
+  (`response_grounded`, `kb_source`); low-confidence matches fall back to a
+  generic acknowledgement.
+- **Stats dashboard** — `/stats` aggregates volume, routing, sentiment,
+  categories, units, and service-quality rates from the audit store
+  (counts only; message-level data stays behind reviewer sign-in).
+- **Slack approvals** — escalation messages carry Block Kit buttons; Slack's
+  signing-v0 HMAC is verified at `/api/slack/actions` and reviewer identity is
+  recorded in the audit trail.
+- **MCP audit server** — a dependency-free MCP server exposes `audit_stats`,
+  `recent_audit_rows`, and `review_summary` to any MCP host (n8n agent,
+  Claude) over stdio.
 - **Operational visibility** — `/api/health`, structured JSON logs, and an
   explicit failure event when an audit write cannot be persisted.
 - **Policy evaluation** — 30 golden routing cases run against the exported
@@ -171,17 +190,21 @@ the shared secret and forwards the request to n8n. See
 
 ## Results
 
-| Check | Result | How it is measured |
-|---|---|---|
-| Routing policy | **30/30 (100%)** | `node scripts/evaluate_policy.mjs` executes the exported workflow code |
-| Audit store | **30/30 assertions** | SQLite idempotency, redaction, retention, migration, limits |
-| API integration | **25/25 assertions** | Built app: login, session redirects, HMAC, audit, review, rate limits |
-| Repository contract | **120/120 checks** | `python3 scripts/validate_repo.py` |
-| Live triage | **15/15** | Recorded Gemini run; see [`TESTING.md`](TESTING.md) |
-| Mock failure modes | **5/5** | Malformed output, missing field, invalid enum, timeout, 429 |
-| Frontend | Builds clean | `npm ci && npm run build`; Docker image builds |
-| Docker runtime | **PASS** | Container health/per-reviewer login/review; HMAC audit row survives restart |
-| Live n8n | **PASS** | 18-node workflow active; no-secret 403, HMAC audit row persisted, per-reviewer resolve |
+| Refresh | Check | Result | Evidence |
+|---|---|---|---|
+| Core | Routing policy | **30/30 (100%)** | `node scripts/evaluate_policy.mjs` executes the exported workflow code |
+| Core | Routing rules + KB grounding | **8/8** | `node scripts/test_routing.mjs` (reasons + grounded cases) |
+| Core | Audit store | **41/41 assertions** | SQLite idempotency, reasons, units, redaction, retention, migration, stats |
+| Core | API integration | **27/27 assertions** | Built app: login, session redirects, HMAC, audit, review, Slack auth, rate limits |
+| Core | Repository contract | **143/143 checks** | `python3 scripts/validate_repo.py` |
+| Core | Live triage | **15/15** | Recorded Gemini run; see [`TESTING.md`](TESTING.md) |
+| Core | Mock failure modes | **5/5** | Malformed output, missing field, invalid enum, timeout, 429 |
+| Core | Frontend | Builds clean | `npm ci && npm run build`; Docker image builds |
+| Runtime | Docker runtime | **PASS** | Container health/per-reviewer login/review; HMAC audit row survives restart |
+| Runtime | Live n8n | **PASS** | 18-node workflow active; no-secret 403, HMAC audit row persisted, per-reviewer resolve |
+| v2 | Slack signing | **7/7 assertions** | `node scripts/test_slack_actions.mjs` (mock-tested; no live Slack workspace) |
+| v2 | MCP server | **18/18 assertions** | `node scripts/test_mcp_server.mjs` (initialize, tools/list, tools/call, errors) |
+| v2 | Stats dashboard | Built & smoke-tested | `/stats` aggregates from `readAuditStats`; runs in `make test-api` |
 
 The policy score is a **conformance test**, not a claim of model accuracy: it
 checks that the exported routing code matches the intended business rules on
@@ -286,6 +309,7 @@ Configuration is provided through environment variables. See
 | `REVIEW_PASSWORD` | No | Legacy shared password, used only when `REVIEW_USERS` is empty |
 | `REVIEW_SESSION_SECRET` | Yes (for `/review`) | HMAC secret for the reviewer session cookie |
 | `SLACK_WEBHOOK_URL` | No | Slack incoming webhook for escalation and digest messages |
+| `SLACK_SIGNING_SECRET` | No | Verifies Slack interactive callbacks (approve buttons) at `/api/slack/actions` |
 | `LLM_PROVIDER` | No | `gemini` (default) or `claude` |
 | `LLM_TIMEOUT_SECONDS` | No | Request timeout, defaults to `30` |
 | `LLM_MAX_RETRIES` | No | Retry count for transient failures, defaults to `2` |
@@ -406,6 +430,27 @@ are redirected to `/login`.
 Returns `ok`, audit-store status, review-auth configuration, row count, and
 uptime. Suitable for container health checks and uptime monitors.
 
+### `POST /api/slack/actions` (Slack → Next.js)
+
+Interactive callback for the escalation workflow's approve buttons. Slack's
+signing-v0 HMAC is verified (stale timestamps > 5 minutes rejected), button
+values map to `resolve|needs_review:<request_id>`, and the update is appended
+with a `<user> (slack)` reviewer identity. Unconfigured (no signing secret)
+returns 503.
+
+### `GET /stats`
+
+Public aggregates-only dashboard: volume per day, routing/sentiment/category/
+unit distributions, review rate, rejection rate, resolution rate, KB-grounding
+rate, and average processing time. No message-level content is rendered.
+
+### MCP audit server (stdio)
+
+`node scripts/mcp_audit_server.mjs` is a dependency-free MCP server exposing
+`audit_stats`, `recent_audit_rows`, and `review_summary` over the SQLite store.
+It speaks JSON-RPC 2.0 on stdin/stdout (newline-delimited) — verify with
+`node scripts/test_mcp_server.mjs`.
+
 ## Testing and CI
 
 ### Offline validation (no API key, no n8n)
@@ -414,6 +459,8 @@ uptime. Suitable for container health checks and uptime monitors.
 python3 scripts/validate_repo.py
 node scripts/test_routing.mjs
 node scripts/test_audit_store.mjs
+node scripts/test_slack_actions.mjs
+node scripts/test_mcp_server.mjs
 node scripts/evaluate_policy.mjs
 make test-api   # builds the frontend first
 ```
@@ -421,9 +468,12 @@ make test-api   # builds the frontend first
 Checks workflow exports, connection integrity, webhook auth, absence of secret
 material, proxy design, and documentation presence. The audit-store test covers
 SQLite idempotency, review events, PII redaction, retention, legacy JSONL
-migration, and limits. The policy evaluation executes the exported routing code
-against 30 golden cases. `make test-api` boots the built app and exercises login,
-auth redirects, HMAC verification, audit writes, review actions, and rate limits.
+migration, routing reasons, unit tags, and the stats aggregation. The policy
+evaluation executes the exported routing code against 30 golden cases.
+`make test-api` boots the built app and exercises login, auth redirects, HMAC
+verification, audit writes, review actions, Slack callback auth, and rate
+limits. The MCP test drives the stdio server end-to-end (initialize,
+tools/list, tools/call, error codes).
 
 ### Live test harness
 
@@ -445,7 +495,8 @@ Results and the evidence table are documented in [`TESTING.md`](TESTING.md).
 `.github/workflows/ci.yml` runs two jobs on every push and pull request:
 
 1. **Validate** — `compileall`, `scripts/validate_repo.py`, routing tests,
-   audit-store tests, and the 30-case policy evaluation; no secrets required.
+   audit-store tests, Slack-signature tests, MCP server tests, and the
+   30-case policy evaluation; no secrets required.
 2. **Build frontend** — `npm ci`, `npm run build`, then `scripts/test_api.mjs`
    against the built app.
 

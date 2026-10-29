@@ -41,6 +41,9 @@ REQUIRED_FILES = [
     "frontend/app/api/health/route.ts",
     "frontend/app/api/auth/login/route.ts",
     "frontend/app/api/auth/logout/route.ts",
+    "frontend/app/api/slack/actions/route.ts",
+    "frontend/app/stats/page.tsx",
+    "frontend/lib/slack-signature.ts",
     "frontend/app/login/page.tsx",
     "frontend/app/review/page.tsx",
     "frontend/app/review/LogoutButton.tsx",
@@ -58,6 +61,10 @@ REQUIRED_FILES = [
     "scripts/test_routing.mjs",
     "scripts/test_audit_store.mjs",
     "scripts/test_api.mjs",
+    "scripts/test_slack_actions.mjs",
+    "scripts/test_mcp_server.mjs",
+    "scripts/mcp_audit_server.mjs",
+    "samples/knowledge_base.json",
     "scripts/evaluate_policy.mjs",
     "scripts/seed_demo.py",
     "scripts/hash_review_password.mjs",
@@ -268,6 +275,33 @@ def validate_features():
 
     check("rateLimit" in login_route, "login API: rate limited")
 
+    slack_route = (ROOT / "frontend/app/api/slack/actions/route.ts").read_text()
+    check("verifySlackSignature" in slack_route, "slack API: signing-v0 verification required")
+    check("SLACK_SIGNING_SECRET" in slack_route, "slack API: secret configurable")
+    check("rateLimit" in slack_route, "slack API: rate limited")
+    check("appendReviewUpdate" in slack_route, "slack API: records reviewer identity")
+
+    slack_sig = (ROOT / "frontend/lib/slack-signature.ts").read_text()
+    check("timingSafeEqual" in slack_sig, "slack signature: constant-time comparison")
+    check("stale_timestamp" in slack_sig, "slack signature: stale timestamps rejected")
+
+    stats_page = (ROOT / "frontend/app/stats/page.tsx").read_text()
+    check("readAuditStats" in stats_page, "stats page: aggregates from the audit store")
+
+    mcp_server = (ROOT / "scripts/mcp_audit_server.mjs").read_text()
+    check("tools/list" in mcp_server, "MCP server: tools/list supported")
+    check("initialize" in mcp_server, "MCP server: initialize handshake")
+    for tool in ["audit_stats", "recent_audit_rows", "review_summary"]:
+        check(tool in mcp_server, f"MCP server: exposes {tool}")
+    check("readAuditState" in mcp_server and "readAuditStats" in mcp_server,
+          "MCP server: backed by the audit store")
+
+    knowledge_base = json.loads((ROOT / "samples/knowledge_base.json").read_text())
+    check(len(knowledge_base.get("entries", [])) >= 8, "knowledge base: enough entries for grounding")
+    check(all(entry.get("keywords") and entry.get("guidance")
+              for entry in knowledge_base.get("entries", [])),
+          "knowledge base: entries have keywords and guidance")
+
     health_route = (ROOT / "frontend/app/api/health/route.ts").read_text()
     check("audit_store" in health_route, "health: reports audit store")
     check("review_auth" in health_route, "health: reports review auth")
@@ -282,7 +316,8 @@ def validate_features():
 
     env = (ROOT / ".env.example").read_text()
     for key in ["AUDIT_DB_PATH", "AUDIT_HMAC_SECRET", "AUDIT_RETENTION_DAYS",
-                "REVIEW_USERS", "REVIEW_PASSWORD", "REVIEW_SESSION_SECRET"]:
+                "REVIEW_USERS", "REVIEW_PASSWORD", "REVIEW_SESSION_SECRET",
+                "SLACK_SIGNING_SECRET"]:
         check(key + "=" in env, f".env.example: documents {key}")
 
     cases = json.loads((ROOT / "samples/eval_cases.json").read_text())

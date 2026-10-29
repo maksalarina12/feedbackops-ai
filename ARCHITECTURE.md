@@ -58,12 +58,23 @@ routing, the audit side branch, and the SQLite demo store.
    - urgency high → `high_priority`
    - any `unknown` field → `review`
    - else → `normal`
+   - Every branch emits `routing_reasons` — human-readable why-the-route-fired
+     entries that travel into the response and the audit trail (v2:
+     explainable routing).
+   - The same node performs mini-RAG grounding: deterministic keyword scoring
+     against the embedded knowledge base (`samples/knowledge_base.json`,
+     baked into the export). A score at/above the threshold grounds the
+     suggested response for `normal` routes (`response_grounded: true`,
+     `kb_source: <entry id>`); a miss falls back to a generic acknowledgement.
+     Retrieval is rule-based on purpose — no LLM, no external calls.
 7. **Build response** — strict response schema: `success`, `request_id`,
-   `result{...}`, `routing_decision`, `review_required`, `suggested_response`,
-   `llm{...}`, `processing_duration_ms`, `error`.
+   `unit` (optional holding-unit tag from input validation), `result{...}`,
+   `routing_decision`, `routing_reasons`, `review_required`,
+   `suggested_response`, `response_grounded`, `kb_source`, `llm{...}`,
+   `processing_duration_ms`, `error`.
 8. **Audit Log (local)** — builds one structured audit row per execution
-   (request_id, timestamp, source, classification, routing, review status,
-   llm_error, duration) and logs it via `[AUDIT]`.
+   (request_id, timestamp, source, unit, classification, routing + reasons,
+   review status, KB grounding, llm_error, duration) and logs it via `[AUDIT]`.
 9. **Persist Audit** (side branch) — enabled only when `AUDIT_WEBHOOK_URL` is
    set. POSTs the row to `/api/audit` with the shared secret plus optional HMAC
    timestamp/signature; the HTTP node uses `onError: continue`, so a store outage never
@@ -73,11 +84,21 @@ routing, the audit side branch, and the SQLite demo store.
     browser talks only to the same-origin proxy.
 11. **Review queue** — `/review` folds the audit stream plus resolution events
    into the current state. Marking an item resolved appends an event; existing
-   rows are never rewritten.
+   rows are never rewritten. v2: unit chips filter the queue per subsidiary,
+   and each row shows its routing reasons and KB-grounding badge; `/stats`
+   renders aggregates only (no message-level content).
 12. **Prepare Escalation** (side branch) — enabled only when
     `ESCALATION_WEBHOOK_URL` is set and the route is not `normal`. The HTTP
     hand-off has `onError: continue`, so a notification failure can never change
-    the triage outcome.
+    the triage outcome. v2: the Slack message carries Block Kit buttons; the
+    interactive callback at `/api/slack/actions` verifies Slack's signing-v0
+    HMAC before appending a `<user> (slack)` resolution event.
+
+**MCP audit server** (separate stdio process,
+`scripts/mcp_audit_server.mjs`): exposes read-only tools (`audit_stats`,
+`recent_audit_rows`, `review_summary`) to any MCP host — agent scenarios like
+"what is stuck in review?" without file or shell access. It performs no writes
+and listens on no network port.
 
 ## Trust boundaries
 

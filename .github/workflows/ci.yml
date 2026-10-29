@@ -25,6 +25,10 @@ jobs:
         run: node scripts/test_routing.mjs
       - name: Test audit store
         run: node scripts/test_audit_store.mjs
+      - name: Test Slack signature verification
+        run: node scripts/test_slack_actions.mjs
+      - name: Test MCP audit server
+        run: node scripts/test_mcp_server.mjs
       - name: Evaluate routing policy
         run: node scripts/evaluate_policy.mjs
 

@@ -155,8 +155,14 @@ Activate both workflows from the n8n UI, then set in `.env`:
 ```bash
 ESCALATION_WEBHOOK_URL=http://localhost:5678/webhook/feedbackops-escalation
 SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+SLACK_SIGNING_SECRET=<from the Slack app Basic Information page>
 N8N_BASE_URL=http://localhost:5678
 ```
+
+`SLACK_SIGNING_SECRET` enables the approve buttons in the escalation message:
+their callback hits the frontend at `/api/slack/actions` and is verified with
+Slack's signing-v0 HMAC. In your Slack app settings, set the interactive
+"Request URL" to `https://<your-demo-domain>/api/slack/actions`.
 
 Restart n8n after changing environment variables. With plain `docker run`, pass
 these variables using `-e` (the container does not read `.env`); with Docker

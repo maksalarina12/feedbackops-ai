@@ -209,6 +209,17 @@ export default function Home() {
             </button>
           ))}
         </div>
+        <div style={{ display: "flex", gap: 14, marginTop: 12, flexWrap: "wrap", color: "#6b7280", fontSize: 11 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "#0d6d45", display: "inline-block" }} /> normal — auto-processed
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "#9f1d1d", display: "inline-block" }} /> high_priority — act first
+          </span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: "#8a5a08", display: "inline-block" }} /> review — human decides
+          </span>
+        </div>
       </section>
 
       {error !== null && (

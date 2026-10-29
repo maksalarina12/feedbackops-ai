@@ -127,3 +127,14 @@ cases honestly.
 - The rate limiter is in-memory per instance; distributed behavior is not tested.
 - CI validates structure and builds the frontend; it does not run the live
   suite (no API key in CI by design).
+
+## v2 additions (status by integration type)
+
+| Area | Status | Evidence |
+|---|---|---|
+| Routing reasons (why-routed) | Unit-tested mock | `scripts/test_routing.mjs` 8/8 — reasons asserted per case |
+| Unit tagging + /review filter | Unit-tested mock | routing validation codes, `scripts/test_audit_store.mjs` units assertions |
+| KB-grounded suggestions (mini-RAG) | Unit-tested mock | golden retrieval: `kb-shipping-delays` hit + ungrounded fallback (`test_routing.mjs`) |
+| Stats dashboard `/stats` | Mock-tested | aggregates from `readAuditStats` asserted in `test_audit_store.mjs`; page smoke-tested in `make test-api` |
+| Slack approve buttons | Unit-tested (signing) + live-integration route check | `scripts/test_slack_actions.mjs` 7/7; `/api/slack/actions` 503-when-unconfigured asserted in `test_api.mjs`; **no live Slack workspace** — button delivery is mock-tested |
+| MCP audit server | Live-tested over stdio | `scripts/test_mcp_server.mjs` 18/18 (initialize, tools/list, tools/call, error codes) |

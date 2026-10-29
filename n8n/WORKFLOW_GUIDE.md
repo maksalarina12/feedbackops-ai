@@ -28,8 +28,8 @@ python3 scripts/build_workflow.py \
 | 3 | Input Valid? (IF) | branch | true → classify; false → deterministic error response |
 | 4 | Gemini Classify | LLM adapter | POST structured prompt + `responseSchema` (sentiment/category/urgency/summary); temp 0; 30 s timeout; credential-based header (key never in export) |
 | 5 | Validate LLM Output | fail-safe | re-parses model text, lowercases + re-checks enums; any violation → `unknown` + review; no silent passes |
-| 6 | Deterministic Routing | rules only | high urgency → `high_priority`; unknown → `review`; else `normal` |
-| 7 | Build Success Response | contract | fixed JSON schema with `processing_duration_ms`, `llm{provider,model,llm_error}` |
+| 6 | Deterministic Routing | rules only | high urgency → `high_priority`; unknown → `review`; else `normal`; always emits `routing_reasons` (why the route fired) and runs the mini-RAG grounding: deterministic keyword scoring over the embedded KB (built from `samples/knowledge_base.json`) sets `response_grounded` + `kb_source` for `normal`-route suggestions |
+| 7 | Build Success Response | contract | fixed JSON schema with `unit`, `routing_reasons`, `suggested_response`, `response_grounded`, `kb_source`, `processing_duration_ms`, `llm{provider,model,llm_error}` |
 | 8 | Build Error Response | contract | valid=false path: code + human note + NO stack traces |
 | 9 | Audit Log (local) | audit | builds one structured audit row/exec and logs it via `[AUDIT]` |
 | 10 | Respond to Webhook | return | final JSON response; no wildcard CORS (browser uses the Next.js proxy) |

@@ -70,3 +70,23 @@
    customers.
 8. Replace the Slack incoming webhook with an app token and per-channel scopes if
    notifications become business-critical.
+
+## Slack approvals and the stats dashboard (v2 additions)
+
+- `/api/slack/actions` verifies Slack's signing-v0 HMAC (constant-time compare,
+  stale > 5 minutes rejected, wrong secret rejected) instead of the same-origin
+  rule used by browser routes — the callback comes from Slack, not a browser.
+  It is rate limited and returns 503 until `SLACK_SIGNING_SECRET` is set, so an
+  unconfigured deployment has no interactive endpoint at all.
+- The escalation message carries two buttons (`resolve`, `keep for review`);
+  both only flip the review status of an existing audit row and record a
+  `<user> (slack)` reviewer identity — the same append-only rule as the web
+  review queue.
+- `/stats` is public **by design** and renders aggregates only (counts, rates,
+  distributions from the audit store). Message-level content, request IDs, and
+  review actions stay behind the reviewer session at `/review`. If a deployment
+  treats aggregate volumes as sensitive, shield `/stats` with the same session
+  check — it is intentionally a separate page so that choice is one edit.
+- The MCP audit server (`scripts/mcp_audit_server.mjs`) exposes read-only tools
+  over the local store; it does no writes and leaks no filesystem paths. It is
+  a stdio process, not a network service — nothing listens on any port.

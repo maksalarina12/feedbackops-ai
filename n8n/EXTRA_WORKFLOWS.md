@@ -4,8 +4,15 @@ Two optional workflows complement the main triage workflow:
 
 | File | Trigger | Purpose |
 |---|---|---|
-| `escalation_workflow.json` | `POST /webhook/feedbackops-escalation` | Posts non-`normal` items to Slack |
+| `escalation_workflow.json` | `POST /webhook/feedbackops-escalation` | Posts non-`normal` items to Slack with human-in-the-loop buttons (`Mark resolved` / `Keep for review`) |
 | `weekly_digest_workflow.json` | Schedule (Monday 08:00) | Summarises the last 7 days of execution health |
+
+The escalation buttons call back into the frontend at `/api/slack/actions`,
+which verifies Slack's signing-v0 HMAC before appending a reviewer update with
+a `<user> (slack)` identity. Configure the app's interactive **Request URL** to
+`https://<your-demo-domain>/api/slack/actions` and set `SLACK_SIGNING_SECRET`
+(see [`SETUP.md`](../SETUP.md)); without it the endpoint stays closed (503) and
+the message degrades to text-only.
 
 Both are **templates**. Channel URLs and API keys live in the environment or in
 n8n credentials, never in the exported JSON. The persistent audit branch lives

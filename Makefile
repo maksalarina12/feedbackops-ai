@@ -14,10 +14,12 @@ logs: ## Follow container logs
 seed: ## Seed the review queue (reads .env when present)
 	set -a; [ -f .env ] && . ./.env; set +a; python3 scripts/seed_demo.py
 
-validate: ## Run offline repository, routing, audit, and policy checks
+validate: ## Run offline repository, routing, audit, slack, and MCP checks
 	python3 scripts/validate_repo.py
 	node scripts/test_routing.mjs
 	node scripts/test_audit_store.mjs
+	node scripts/test_slack_actions.mjs
+	node scripts/test_mcp_server.mjs
 
 eval: ## Evaluate the exported routing policy against golden cases
 	node scripts/evaluate_policy.mjs
