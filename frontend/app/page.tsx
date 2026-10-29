@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
+import ConsoleTopBar from "./components/ConsoleTopBar";
 
 type Severity = "normal" | "high_priority" | "review";
 
@@ -87,6 +87,18 @@ const ROUTE_CHIP: Record<Severity, { bg: string; fg: string; label: string }> = 
   review: { bg: "var(--warn-bg)", fg: "var(--warn)", label: "review" },
 };
 
+const SPEC_ROWS: { key: string; val: string }[] = [
+  { key: "workflow", val: "n8n · webhook + audit fanout" },
+  { key: "model", val: "Google Gemini · single pass" },
+  { key: "router", val: "deterministic rules first" },
+  { key: "validation", val: "max 2000 chars · injection guard" },
+  { key: "grounding", val: "kb-grounded drafts · 10 entries" },
+  { key: "audit", val: "sqlite append-only ledger" },
+  { key: "review", val: "scrypt auth · reviewer-attributed" },
+  { key: "escalation", val: "slack block kit · signed v0" },
+  { key: "secrets", val: "server-side proxy only" },
+];
+
 export default function Home() {
   const [feedback, setFeedback] = useState("");
   const [unit, setUnit] = useState("");
@@ -128,44 +140,69 @@ export default function Home() {
   const routeChip = ROUTE_CHIP[route] ?? ROUTE_CHIP.review;
 
   return (
-    <main style={{ maxWidth: 760, margin: "32px auto", padding: "0 24px", paddingBottom: 48 }}>
-      {/* ── Header ─────────────────────────────────────────── */}
-      <header className="panel" style={{ padding: 0, marginBottom: 24, overflow: "hidden" }}>
-        <div
-          className="panel-head"
-          style={{ margin: 0, padding: "8px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}
-        >
-          <span className="micro">FeedbackOps · Intelligent feedback routing</span>
-          <span className="micro tnum">n8n → gemini → rules</span>
+    <main style={{ maxWidth: 1040, margin: "0 auto", padding: "0 24px 48px" }}>
+      <ConsoleTopBar />
+
+      {/* ── Hero: thesis + live pipeline + workflow spec ─────── */}
+      <section className="hero">
+        <div className="hero-band">
+          <span className="micro">Intelligent feedback triage · live demo</span>
+          <span className="micro tnum">synthetic data only</span>
         </div>
-        <div style={{ padding: "18px 20px 20px" }}>
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-            <div style={{ maxWidth: 480 }}>
-              <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.01em", marginBottom: 6 }}>
-                Triage customer feedback
+        <div className="hero-body">
+          <div className="split">
+            <div>
+              <h1 className="display-1" style={{ marginBottom: 12 }}>
+                Consequential feedback, routed by rules — not vibes.
               </h1>
-              <p style={{ color: "var(--muted)", fontSize: 13.5, lineHeight: 1.55 }}>
-                One LLM pass classifies the message. Deterministic rules route it.
-                Consequential data always lands in a review queue — never silently
-                passed.
+              <p style={{ color: "var(--muted)", fontSize: 13.5, lineHeight: 1.6, maxWidth: "58ch", marginBottom: 18 }}>
+                One LLM pass classifies the message. Deterministic rules decide
+                where it goes. Consequential data always lands in a review
+                queue — never silently passed. Type synthetic feedback below and
+                watch the full pipeline respond in real time.
               </p>
+              <div className="micro" style={{ marginBottom: 8 }}>
+                Pipeline · POST /webhook/feedbackops
+              </div>
+              <div className="pipeline">
+                <span className="pipeline-node live">
+                  <span className="dot" /> validate
+                </span>
+                <span className="pipeline-sep" />
+                <span className="pipeline-node live">
+                  <span className="dot" /> classify
+                </span>
+                <span className="pipeline-sep" />
+                <span className="pipeline-node live">
+                  <span className="dot" /> route
+                </span>
+                <span className="pipeline-sep" />
+                <span className="pipeline-node">
+                  <span className="dot" /> audit + review queue
+                </span>
+              </div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Link href="/stats" className="navlink">
-                Stats
-              </Link>
-              <Link href="/review" className="navlink">
-                Review queue →
-              </Link>
+            <div>
+              <div className="micro" style={{ marginBottom: 8 }}>
+                Workflow spec · build v2
+              </div>
+              <div className="spec">
+                {SPEC_ROWS.map((row) => (
+                  <div className="spec-row" key={row.key}>
+                    <span className="key">{row.key}</span>
+                    <span className="val">{row.val}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </header>
+      </section>
 
-      {/* ── Form panel ─────────────────────────────────────── */}
-      <section className="panel" style={{ marginBottom: 24 }}>
+      {/* ── Input panel ─────────────────────────────────────── */}
+      <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head">
-          <span className="micro">Input · Synthetic feedback only</span>
+          <span className="micro">Input · synthetic feedback</span>
           <span className="micro tnum">max 2000 chars</span>
         </div>
         <label className="micro" htmlFor="feedback-input" style={{ display: "block", marginBottom: 6 }}>
@@ -210,9 +247,9 @@ export default function Home() {
       </section>
 
       {/* ── Scenarios ──────────────────────────────────────── */}
-      <section className="panel" style={{ marginBottom: 24 }}>
+      <section className="panel" style={{ marginBottom: 20 }}>
         <div className="panel-head">
-          <span className="micro">Test scenarios</span>
+          <span className="micro">Adversarial test scenarios · one click, real workflow</span>
           <span style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             <span className="chip" style={{ background: "var(--ok-bg)", color: "var(--ok)" }}>
               <span className="dot" style={{ background: "var(--ok)" }} /> normal
@@ -241,6 +278,10 @@ export default function Home() {
             </button>
           ))}
         </div>
+        <p className="micro" style={{ marginTop: 12, textTransform: "none", letterSpacing: 0 }}>
+          The injection and empty-request scenarios hit the validation guard
+          before a single LLM token is spent — that is the point of the router.
+        </p>
       </section>
 
       {/* ── Results ────────────────────────────────────────── */}
@@ -248,7 +289,7 @@ export default function Home() {
         {error !== null && (
           <div
             className="panel"
-            style={{ borderColor: "var(--err)", background: "var(--err-bg)", marginBottom: 24 }}
+            style={{ borderColor: "var(--err)", background: "var(--err-bg)", marginBottom: 20 }}
           >
             <span className="chip-solid" style={{ background: "var(--err)", color: "#fff" }}>
               error
@@ -258,7 +299,7 @@ export default function Home() {
         )}
 
         {loading && (
-          <section className="panel" style={{ marginBottom: 24 }}>
+          <section className="panel" style={{ marginBottom: 20 }}>
             <p className="mono" style={{ color: "var(--muted)", fontSize: 12.5 }}>
               running workflow: validate → classify → route … (typical latency 4–8 s)
             </p>
@@ -269,7 +310,7 @@ export default function Home() {
           <div ref={resultsRef}>
             {!result.success ? (
               /* Rejected pre-LLM — deliberate deterministic path */
-              <section className="panel" style={{ marginBottom: 24 }}>
+              <section className="panel" style={{ marginBottom: 20 }}>
                 <div className="panel-head">
                   <span className="chip-solid" style={{ background: "var(--surface-2)", color: "var(--muted)" }}>
                     rejected · pre-LLM
@@ -293,7 +334,7 @@ export default function Home() {
               </section>
             ) : (
               /* Ledger result card */
-              <section className="panel" style={{ marginBottom: 24 }}>
+              <section className="panel" style={{ marginBottom: 20 }}>
                 <div className="panel-head">
                   <span className="micro">Triage result</span>
                   <span className="mono tnum" style={{ fontSize: 11, color: "var(--faint)" }}>
@@ -326,13 +367,13 @@ export default function Home() {
                   )}
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12, marginBottom: 16 }}>
                   <FieldChip label="Sentiment" value={result.result?.sentiment ?? "unknown"} />
                   <FieldChip label="Category" value={result.result?.category ?? "unknown"} />
                   <FieldChip label="Urgency" value={result.result?.urgency ?? "unknown"} />
                 </div>
 
-                <p style={{ fontSize: 13.5, color: "var(--ink)", lineHeight: 1.6, maxWidth: "60ch" }}>
+                <p style={{ fontSize: 13.5, color: "var(--ink)", lineHeight: 1.6, maxWidth: "65ch" }}>
                   {result.result?.summary}
                 </p>
 
@@ -382,19 +423,62 @@ export default function Home() {
         )}
       </div>
 
-      {/* ── Footer ─────────────────────────────────────────── */}
-      <footer style={{ marginTop: 32, color: "var(--faint)", fontSize: 11, lineHeight: 1.7, maxWidth: "70ch" }}>
-        Demo prototype. Synthetic feedback only — this form never sends real
-        customer data. Suggested responses are drafts; a review flag keeps the
-        item open in the review queue. Audit rows persist to a local SQLite demo
-        store behind reviewer sign-in. Browser requests go through a server-side
-        proxy; the webhook secret is never exposed to the client.
-        <div style={{ marginTop: 10, display: "flex", gap: 12, flexWrap: "wrap" }}>
+      {/* ── How it works ───────────────────────────────────── */}
+      <section className="panel" style={{ marginBottom: 0 }}>
+        <div className="panel-head">
+          <span className="micro">How the router decides</span>
+          <span className="micro tnum">deterministic post-LLM</span>
+        </div>
+        <div className="steps">
+          <div className="step">
+            <div className="step-num">01</div>
+            <div className="step-title">Validate &amp; guard</div>
+            <div className="step-body">
+              Schema, length and prompt-injection checks run first. Bad requests
+              are rejected deterministically — zero AI cost, fully audited.
+            </div>
+          </div>
+          <div className="step">
+            <div className="step-num">02</div>
+            <div className="step-title">Classify once</div>
+            <div className="step-body">
+              A single Gemini pass returns sentiment, category, urgency, a
+              summary and an optional KB-grounded response draft.
+            </div>
+          </div>
+          <div>
+            <div className="step-num">03</div>
+            <div className="step-title">Route by rules</div>
+            <div className="step-body">
+              A rule table maps the classification to normal, high-priority or
+              human review — with the exact reasons attached to the audit row.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Colophon ───────────────────────────────────────── */}
+      <footer className="colophon">
+        <div className="micro">FeedbackOps AI · demo console · v2</div>
+        <p style={{ maxWidth: "70ch", fontSize: 12, lineHeight: 1.7 }}>
+          Demo prototype. Synthetic feedback only — this form never sends real
+          customer data. Suggested responses are drafts; a review flag keeps the
+          item open in the review queue. Audit rows persist to a local SQLite
+          demo store behind reviewer sign-in. Browser requests go through a
+          server-side proxy; the webhook secret is never exposed to the client.
+        </p>
+        <div className="mono" style={{ fontSize: 11, display: "flex", gap: 16, flexWrap: "wrap" }}>
           <span>
-            Built by <b>Maksalmina</b> ·{" "}
-            <a className="textlink" href="https://maksalmina-arina.vercel.app" target="_blank" rel="noreferrer">
+            built by <b style={{ color: "var(--muted)" }}>Maksalmina</b> ·{" "}
+            <a href="https://maksalmina-arina.vercel.app" target="_blank" rel="noreferrer">
               portfolio
             </a>
+          </span>
+          <span>
+            <a href="/stats">/stats</a>
+          </span>
+          <span>
+            <a href="/review">/review</a>
           </span>
         </div>
       </footer>

@@ -1,87 +1,82 @@
 # FeedbackOps AI — Design Contract (canonical visual rules)
 
+**v3 — "Control room" dark operations console (2026-10-29)**
+
 ## Thesis
 
-> FeedbackOps AI should feel like a **precision operations console**, because it
-> is an audit-and-triage system for engineers, using a data-dense ledger
-> language: hairline borders, monospaced data, status-only color, zero
-> decorative noise. The interviewer should read it as "built by someone who
-> ships internal tooling," not "assembled from a SaaS template."
+> FeedbackOps AI should feel like a **precision operations console / control
+> room**, because it is an audit-and-triage system for engineers, using a
+> dark, data-dense terminal language: near-black surfaces, hairline borders,
+> mono micro-labels, tabular numerals, one signal-green accent for positive
+> state, semantic color reserved for status. Rich but not decorative — every
+> section carries real system facts (workflow spec, pipeline, steps, KPIs).
 
 Reference synthesis (do not copy):
-- **Mercury** — calm monochrome, tabular numerals, money/data in neutrals →
-  borrow restraint + tabular data treatment. NOT the onyx financial-dark.
-- **Linear** — charcoal panels with hairline borders, accent only where meant
-  → borrow borders-over-shadows hierarchy. NOT the dark theme (we are light).
-- **Observability consoles (Grafana-class)** — status-first semantics, dense
-  aggregates → borrow the dot-status system and bar language. NOT colorful
-  noisy dashboards.
+- **Linear** — dark panels with hairline borders; accent only where meant.
+- **Vercel** — white-on-dark primary CTA, monochrome discipline.
+- **Grafana-class consoles** — status-first semantics; bars only from real data.
 
 ## Typography
 
-| Role | Stack | Notes |
+| Role | Font | Notes |
 |---|---|---|
-| UI / body | `system-ui, -apple-system, "Segoe UI", sans-serif` | 13–14px body |
-| Data / IDs / label micro | `ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace` | request IDs, numerals, panel labels |
-| Micro-labels | same mono, 10–11px, `uppercase`, `letter-spacing: .08em`, muted | panel headers, column heads |
-| Scale | 26 (page title) / 15 (section) / 13.5 body / 12.5 meta / 10–11 micro | line-height 1.5–1.6 body |
-| Numerals | `font-variant-numeric: tabular-nums` | all counts, durations, percentages |
+| Display / headings / brand / big KPIs | **Space Grotesk** (500/600/700, self-hosted via @fontsource) | page titles 34px → 27px mobile, `letter-spacing -0.02em` |
+| Body / UI | `system-ui` stack | 13.5px, lh 1.55–1.6 |
+| Data / labels / meta / spec keys | **JetBrains Mono** (400/600/700, @fontsource) | request IDs, trace lines, `.micro` 10px uppercase `ls .1em` |
+| Numerals | `tabular-nums` | all counts, durations, rates |
 
-## Color (semantic roles only — no decorative color)
+## Color (dark, semantic only)
 
 ```
---bg:            #f7f7f3   (warm paper)
---surface:       #ffffff
---surface-2:     #f2f2ee
---border:        #e4e4de
---border-strong: #c9c9c1
---ink:           #16181d
---ink-hover:     #262930   (primary button hover)
---muted:         #565b64
---faint:         #83878f
---ok:   #0d6d45  bg #e5f3ea    --warn:  #8a5a08 bg #f9f2e2
---err:  #9f1d1d  bg #faeaea    --info:  #1e4e8c bg #e9f1fa
---track: #e9e9e3        (bars/progress background)
+--bg  #0c0f13   --surface #12161c   --surface-2 #181d24
+--border #232a33  --border-strong #333c47
+--ink #e8ebef   --muted #9aa4af   --faint #66707c
+--ok #3ecf8e / --ok-bg #10281c
+--warn #e8b13f / --warn-bg #292113
+--err #ff7a70 / --err-bg #2b1513
+--info #6ea8fe / --info-bg #13223b
+--track #1d232b
 ```
 
-Color is reserved for STATUS (route chips, review state, error text) and
-nothing else. Interactive primary = ink black.
+- Interactive primary = light ink button (`--ink` bg, `#0c0f13` text), hover pure white.
+- Signal green = live/ok state only (brand dot, pipeline live nodes, step numbers, `:focus-visible`).
+- Bars: semantic mapping (normal/positive→ok, review/mixed→warn,
+  high_priority/negative→err, explicit fail-safes→muted; others info).
 
-## Shape
+## Shape & depth
 
-- Card / panel radius **8**; control radius **5**; chip radius **4**.
-- Borders **1px solid** always; no shadows anywhere; no blur/glass.
-- No pill radius (999) anywhere.
+- Radius: card 10 · control 6 · chip 4. Borders 1px; **no shadows, no blur,
+  no pill radius**. One exception: 3px green ring on "live" dots (state, not
+  decoration).
 
-## Spacing
+## Layout / density
 
-`4 / 8 / 12 / 16 / 24 / 32 / 48`. Page padding 24. Panel padding 16–20.
-Container: demo 760px · review/stats 1000px · margin-top 32.
-
-## Density & grid
-
-- Data-dense; single-column narrative with sectioned panels.
-- Stat tiles: flex row, auto-fit, min 140px, 8px gaps.
-- Review rows as compact list cards with a mono meta line.
-- Focus state: 2px ink outline, 2px offset. Visible always.
-
-## Signature elements (memorable anchors)
-
-1. **Panel header strip** — mono uppercase micro-label + hairline rule
-   (e.g. `TRIAGE · INTELLIGENT FEEDBACK ROUTING`).
-2. **Ledger result card** — machine-classification box: mono request_id at top
-   right, grid of labelled fields, "routed because" trace list with `⌙` mono
-   prefix, suggested response as an indented draft block.
-3. **Dot-status chips** — 6px dot + label in a 4px-radius chip, semantic color.
+- Container 1040px, padding 24. Split hero 1.45fr/1fr → single column < 780px.
+- Console chrome: topbar (brand + tag + nav), hero band (micro-label strip),
+  panels with `.panel-head`.
+- Signature elements: (1) console topbar with green brand dot, (2) **pipeline
+  strip** `validate → classify → route → audit` with live dots, (3) **workflow
+  spec list** — mono key/value rows with real system facts, (4) `⌙` trace
+  prefix, (5) numbered steps 01/02/03, (6) colophon footer.
+- Stars/stats: KPI tiles flex min 140px; review rows compact ledger cards.
 
 ## Motion
 
-None by default. State transitions only: cursor, opacity, disabled. Respect
-reduced motion implicitly (nothing animates).
+None by default; states only (hover border/color, disabled opacity). Nothing
+animates → reduced-motion is trivially respected.
 
 ## Anti-patterns (blocked)
 
-Purple/blue gradients · glassmorphism · shadows on every surface · pill radius
-· hover-lift · icon-per-noun · generic purple SaaS hero · 999-radius badges as
-primary language · decorative blobs · lorem/placeholder copy · meaningless
-charts (/stats bars are computed from real store data, never decoration).
+Purple/blue gradients · multi-color decorative bar palettes · shadows/glass ·
+pill radius · giant centered hero · fake metrics (stats are store-computed
+only, contract exposes "invented metrics: none").
+
+## Pages
+
+- `/` demo: hero thesis + spec + pipeline → input → scenarios (with guard
+  explanation) → result ledger → how-it-works steps → colophon.
+- `/review`: hero + session spec rows → KPI tiles → unit filter tabs → ledger
+  rows → colophon.
+- `/stats`: hero + "invented metrics: none" spec → volume bars → semantic
+  distributions → service-quality KPIs → colophon.
+- `/login`: hero + protection-model spec → form panel.

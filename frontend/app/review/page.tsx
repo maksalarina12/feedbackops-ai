@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { readAuditState } from "../../lib/audit-store.mjs";
 import type { AuditRow } from "../../lib/audit-store.mjs";
 import { getReviewSession } from "../../lib/review-auth";
+import ConsoleTopBar from "../components/ConsoleTopBar";
 import LogoutButton from "./LogoutButton";
 import ReviewActions from "./ReviewActions";
 
@@ -52,18 +53,11 @@ function formatDate(value: string | null): string {
 
 function Stat({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div style={{ flex: "1 1 140px", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--r-card)", padding: "12px 16px" }}>
+    <div className="stat">
       <div className="micro">{label}</div>
       <div
-        className="tnum"
-        style={{
-          fontSize: 26,
-          fontWeight: 700,
-          color: accent,
-          lineHeight: 1.25,
-          marginTop: 4,
-          fontVariantNumeric: "tabular-nums",
-        }}
+        className="stat-value tnum"
+        style={{ color: accent }}
       >
         {value}
       </div>
@@ -78,7 +72,7 @@ function FilterTab({ href, label, active }: { href: string; label: string; activ
       className="btn"
       style={
         active
-          ? { background: "var(--ink)", borderColor: "var(--ink)", color: "#fff", padding: "4px 12px", fontSize: 12 }
+          ? { background: "var(--ink)", borderColor: "var(--ink)", color: "#0c0f13", padding: "4px 12px", fontSize: 12 }
           : { padding: "4px 12px", fontSize: 12 }
       }
     >
@@ -104,41 +98,57 @@ export default async function ReviewPage({
   const rows = activeUnit ? allRows.filter((row) => row.unit === activeUnit) : allRows;
 
   return (
-    <main style={{ maxWidth: 1000, margin: "32px auto", padding: "0 24px", paddingBottom: 48 }}>
-      {/* ── Header ─────────────────────────────────────────── */}
-      <header className="panel" style={{ padding: 0, marginBottom: 20, overflow: "hidden" }}>
-        <div
-          className="panel-head"
-          style={{ margin: 0, padding: "8px 20px", borderBottom: "1px solid var(--border)", background: "var(--surface-2)" }}
-        >
-          <span className="micro">FeedbackOps · Review queue</span>
+    <main style={{ maxWidth: 1040, margin: "0 auto", padding: "0 24px 48px" }}>
+      <ConsoleTopBar />
+
+      {/* ── Hero ───────────────────────────────────────────── */}
+      <section className="hero">
+        <div className="hero-band">
+          <span className="micro">Review queue · audit ledger</span>
           <span className="micro">append-only · reviewer-attributed</span>
         </div>
-        <div style={{ padding: "18px 20px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ maxWidth: 520 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.01em", marginBottom: 6 }}>
-              Review queue
-            </h1>
-            <p style={{ color: "var(--muted)", fontSize: 13.5, lineHeight: 1.55 }}>
-              Persistent audit rows written by the workflow. Items routed to
-              human review stay open until a reviewer resolves them; actions
-              append events, history is never rewritten.
-            </p>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span className="mono" style={{ color: "var(--muted)", fontSize: 12 }}>
-              {session.username}
-            </span>
-            <LogoutButton />
-            <Link href="/stats" className="navlink">
-              Stats
-            </Link>
-            <Link href="/" className="navlink">
-              Back to demo →
-            </Link>
+        <div className="hero-body">
+          <div className="split">
+            <div>
+              <h1 className="display-1" style={{ marginBottom: 12 }}>
+                Human review, on the record.
+              </h1>
+              <p style={{ color: "var(--muted)", fontSize: 13.5, lineHeight: 1.6, maxWidth: "56ch" }}>
+                Persistent audit rows written by the workflow. Items routed to
+                human review stay open until a reviewer resolves them; actions
+                append events, history is never rewritten.
+              </p>
+            </div>
+            <div>
+              <div className="micro" style={{ marginBottom: 8 }}>Session</div>
+              <div className="spec">
+                <div className="spec-row">
+                  <span className="key">reviewer</span>
+                  <span className="val">{session.username}</span>
+                </div>
+                <div className="spec-row">
+                  <span className="key">rows shown</span>
+                  <span className="val tnum">{rows.length} / {allRows.length}</span>
+                </div>
+                <div className="spec-row">
+                  <span className="key">controls</span>
+                  <span className="val" style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                    <Link href="/stats" className="navlink" style={{ padding: "3px 9px", fontSize: 11.5 }}>
+                      Stats
+                    </Link>
+                    <Link href="/" className="navlink" style={{ padding: "3px 9px", fontSize: 11.5 }}>
+                      Demo →
+                    </Link>
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>
+                      <LogoutButton />
+                    </span>
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </header>
+      </section>
 
       {/* ── Counters ───────────────────────────────────────── */}
       <section style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
@@ -152,9 +162,7 @@ export default async function ReviewPage({
       {/* ── Unit filter ────────────────────────────────────── */}
       {units.length > 0 && (
         <section style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <span className="micro" style={{ letterSpacing: "0.08em" }}>
-            Unitfilter
-          </span>
+          <span className="micro">Unit filter</span>
           <FilterTab href="/review" label={`all · ${allRows.length}`} active={!activeUnit} />
           {units.map((unit) => {
             const count = allRows.filter((row) => row.unit === unit).length;
@@ -211,8 +219,7 @@ export default async function ReviewPage({
                     </span>
                     {row.unit && (
                       <span className="chip" style={{ background: "var(--surface-2)", color: "var(--muted)" }}>
-                        {/* holding-company unit tag */}
-                        <b className="mono">{row.unit}</b>
+                        unit <b className="mono">{row.unit}</b>
                       </span>
                     )}
                     {row.response_grounded === true && row.kb_source && (
@@ -261,16 +268,20 @@ export default async function ReviewPage({
         </section>
       )}
 
-      {/* ── Footer ─────────────────────────────────────────── */}
-      <footer style={{ marginTop: 24, color: "var(--faint)", fontSize: 11, lineHeight: 1.7, maxWidth: "70ch" }}>
-        Showing up to 100 most recent rows from the SQLite demo store. Replace
-        it with Postgres or another durable store before production. Review
-        actions are appended as events; rows are never mutated in place.
-        <div style={{ marginTop: 10 }}>
-          Built by <b>Maksalmina</b> ·{" "}
-          <a className="textlink" href="https://maksalmina-arina.vercel.app" target="_blank" rel="noreferrer">
-            portfolio
-          </a>
+      {/* ── Colophon ───────────────────────────────────────── */}
+      <footer className="colophon">
+        <div className="micro">FeedbackOps AI · review console</div>
+        <p style={{ maxWidth: "70ch", fontSize: 12, lineHeight: 1.7 }}>
+          Showing up to 100 most recent rows from the SQLite demo store. Replace
+          it with Postgres or another durable store before production. Review
+          actions are appended as events; rows are never mutated in place.
+        </p>
+        <div className="mono" style={{ fontSize: 11 }}>
+          built by{" "}
+          <a href="https://maksalmina-arina.vercel.app" target="_blank" rel="noreferrer">
+            Maksalmina
+          </a>{" "}
+          · portfolio
         </div>
       </footer>
     </main>
