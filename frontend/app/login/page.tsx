@@ -30,7 +30,7 @@ export default async function LoginPage() {
         Back to demo
       </a>
       <footer style={{ marginTop: 14, color: "#9ca3af", fontSize: 11 }}>
-        Built by <strong>PT Arina Digital Mandiri</strong> ·{" "}
+        Built by <strong>Maksalmina</strong> ·{" "}
         <a
           href="https://maksalmina-arina.vercel.app"
           target="_blank"

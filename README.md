@@ -29,8 +29,9 @@ human review.
 > [`CASE_STUDY.md`](CASE_STUDY.md) for the problem framing, operating model,
 > KPI targets, rollout phases, and honest production gaps.
 
-**Built by** [PT Arina Digital Mandiri](https://maksalmina-arina.vercel.app) —
-full-stack & AI workflow engineering ([GitHub](https://github.com/maksalarina12)).
+**Built by** [Maksalmina](https://maksalmina-arina.vercel.app) — full-stack & AI
+workflow engineering · [GitHub](https://github.com/maksalarina12). See
+[Author](#author) below.
 
 ---
 
@@ -48,6 +49,7 @@ full-stack & AI workflow engineering ([GitHub](https://github.com/maksalarina12)
 - [Security and limitations](#security-and-limitations)
 - [Project structure](#project-structure)
 - [Documentation](#documentation)
+- [Author](#author)
 - [License](#license)
 
 ---
@@ -530,6 +532,19 @@ feedbackops-ai/
 | [`docs/adr/`](docs/adr) | Architecture decision records |
 | [`scripts/hash_review_password.mjs`](scripts/hash_review_password.mjs) | Generate per-reviewer password hashes |
 
+## Author
+
+Built by **Maksalmina**, a full-stack developer (TypeScript, Python,
+React/Next.js, Node) delivering end-to-end client web applications since 2020,
+with hands-on work in LLM-powered products and workflow automation.
+
+- **Portfolio** — <https://maksalmina-arina.vercel.app>
+- **GitHub** — <https://github.com/maksalarina12>
+
+FeedbackOps AI is an open reference implementation of the feedback-triage
+pattern I build for client operations: a day-one runnable system where the LLM
+proposes, deterministic code disposes, and nothing ships without an audit trail.
+
 ## License
 
-Released under the [MIT License](LICENSE). © 2026 PT Arina Digital Mandiri.
+Released under the [MIT License](LICENSE). © 2026 Maksalmina.

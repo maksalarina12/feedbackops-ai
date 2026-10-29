@@ -165,8 +165,8 @@ export default async function ReviewPage() {
         Replace it with Postgres or another durable store before production.
         Review actions are appended as events; rows are never mutated in place.
         <div style={{ marginTop: 10 }}>
-          Built by <strong>PT Arina Digital Mandiri</strong> — full-stack &amp; AI
-          workflow engineering ·{" "}
+          Built by <strong>Maksalmina</strong> — full-stack &amp; AI workflow
+          engineering ·{" "}
           <a
             href="https://maksalmina-arina.vercel.app"
             target="_blank"

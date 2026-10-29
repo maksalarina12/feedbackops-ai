@@ -263,8 +263,8 @@ export default function Home() {
         store and are protected by reviewer sign-in. Browser requests go through a server-side proxy; the webhook
         secret is never exposed to the client.
         <div style={{ marginTop: 10 }}>
-          Built by <strong>PT Arina Digital Mandiri</strong> — full-stack &amp; AI
-          workflow engineering ·{" "}
+          Built by <strong>Maksalmina</strong> — full-stack &amp; AI workflow
+          engineering ·{" "}
           <a
             href="https://maksalmina-arina.vercel.app"
             target="_blank"
