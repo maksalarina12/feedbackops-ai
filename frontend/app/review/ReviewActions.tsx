@@ -45,20 +45,12 @@ export default function ReviewActions({
         type="button"
         onClick={() => update(resolved ? "needs_review" : "resolved")}
         disabled={loading}
-        style={{
-          background: resolved ? "#fff" : "#0d6d45",
-          color: resolved ? "#374151" : "#fff",
-          border: resolved ? "1px solid #d1d5db" : "1px solid #0d6d45",
-          borderRadius: 8,
-          padding: "7px 12px",
-          fontSize: 12,
-          fontWeight: 600,
-          cursor: loading ? "wait" : "pointer",
-        }}
+        className={resolved ? "btn" : "btn btn-solid"}
+        style={{ padding: "6px 12px", fontSize: 12 }}
       >
         {loading ? "Saving…" : resolved ? "Reopen" : "Mark resolved"}
       </button>
-      {error && <div style={{ color: "#9f1d1d", fontSize: 11, marginTop: 6 }}>{error}</div>}
+      {error && <div style={{ color: "var(--err)", fontSize: 11, marginTop: 6 }}>{error}</div>}
     </div>
   );
 }

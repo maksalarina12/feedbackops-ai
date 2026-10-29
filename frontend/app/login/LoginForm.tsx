@@ -36,9 +36,10 @@ export default function LoginForm() {
   return (
     <form
       onSubmit={submit}
-      style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 18, marginTop: 18 }}
+      className="panel"
+      style={{ padding: 20, marginTop: 16, maxWidth: 380 }}
     >
-      <label htmlFor="review-username" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+      <label className="micro" htmlFor="review-username" style={{ display: "block", marginBottom: 6 }}>
         Username
       </label>
       <input
@@ -49,9 +50,10 @@ export default function LoginForm() {
         onChange={(event) => setUsername(event.target.value)}
         required
         autoFocus
-        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: 8, padding: "10px 12px", fontSize: 14, marginBottom: 12 }}
+        className="field"
+        style={{ width: "100%", boxSizing: "border-box", marginBottom: 12 }}
       />
-      <label htmlFor="review-password" style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#374151", marginBottom: 6 }}>
+      <label className="micro" htmlFor="review-password" style={{ display: "block", marginBottom: 6 }}>
         Password
       </label>
       <input
@@ -61,17 +63,19 @@ export default function LoginForm() {
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         required
-        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: 8, padding: "10px 12px", fontSize: 14 }}
+        className="field"
+        style={{ width: "100%", boxSizing: "border-box" }}
       />
       <button
         type="submit"
         disabled={loading}
-        style={{ width: "100%", marginTop: 12, background: "#101318", color: "#fff", border: 0, borderRadius: 8, padding: "10px 12px", fontSize: 14, fontWeight: 600, cursor: loading ? "wait" : "pointer" }}
+        className="btn btn-primary"
+        style={{ width: "100%", marginTop: 14, padding: "9px 12px", fontSize: 13 }}
       >
         {loading ? "Signing in…" : "Sign in"}
       </button>
       {error && (
-        <p role="alert" style={{ color: "#9f1d1d", fontSize: 12, marginBottom: 0 }}>
+        <p role="alert" style={{ color: "var(--err)", fontSize: 12, marginTop: 10, marginBottom: 0 }}>
           {error === "invalid_credentials" ? "Wrong username or password." : error === "rate_limited" ? "Too many attempts. Try again shortly." : error}
         </p>
       )}

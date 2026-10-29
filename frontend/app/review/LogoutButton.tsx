@@ -12,7 +12,7 @@ export default function LogoutButton() {
         router.push("/login");
         router.refresh();
       }}
-      style={{ color: "#4b5563", fontSize: 12, background: "none", border: 0, cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
+      style={{ color: "var(--muted)", fontSize: 12, background: "none", border: 0, cursor: "pointer", padding: 0, whiteSpace: "nowrap" }}
     >
       Sign out
     </button>
