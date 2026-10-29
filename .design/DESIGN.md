@@ -1,82 +1,63 @@
 # FeedbackOps AI — Design Contract (canonical visual rules)
 
-**v3 — "Control room" dark operations console (2026-10-29)**
+**v4 — clean & soft light (2026-10-29)**
 
 ## Thesis
 
-> FeedbackOps AI should feel like a **precision operations console / control
-> room**, because it is an audit-and-triage system for engineers, using a
-> dark, data-dense terminal language: near-black surfaces, hairline borders,
-> mono micro-labels, tabular numerals, one signal-green accent for positive
-> state, semantic color reserved for status. Rich but not decorative — every
-> section carries real system facts (workflow spec, pipeline, steps, KPIs).
+> FeedbackOps AI should feel like a **calm, well-made internal tool**: warm
+> off-white surfaces, soft desaturated status colors, quiet typography, and
+> generous-but-informative density. Professional and human — not a dark
+> "hacker terminal" and not a loud SaaS template.
 
-Reference synthesis (do not copy):
-- **Linear** — dark panels with hairline borders; accent only where meant.
-- **Vercel** — white-on-dark primary CTA, monochrome discipline.
-- **Grafana-class consoles** — status-first semantics; bars only from real data.
+Evolution: v2 light paper (too plain) → v3 dark console (too "AI terminal")
+→ **v4 clean & soft** (kept v3's rich information structure, calmed the skin).
 
 ## Typography
 
-| Role | Font | Notes |
-|---|---|---|
-| Display / headings / brand / big KPIs | **Space Grotesk** (500/600/700, self-hosted via @fontsource) | page titles 34px → 27px mobile, `letter-spacing -0.02em` |
-| Body / UI | `system-ui` stack | 13.5px, lh 1.55–1.6 |
-| Data / labels / meta / spec keys | **JetBrains Mono** (400/600/700, @fontsource) | request IDs, trace lines, `.micro` 10px uppercase `ls .1em` |
-| Numerals | `tabular-nums` | all counts, durations, rates |
+- **Manrope** 400–800, self-hosted via @fontsource — everything: headings
+  (30px/800 hero, -0.02em), body 13.5px, UI.
+- **JetBrains Mono** 400/600 — only for request IDs, machine metadata, and
+  tabular numerals. NOT for labels or decoration.
+- Micro-labels: 11px/600 uppercase sans, color faint, `ls .05em` (no mono).
+- `tabular-nums` on counts/durations/rates.
 
-## Color (dark, semantic only)
+## Color (soft, desaturated)
 
 ```
---bg  #0c0f13   --surface #12161c   --surface-2 #181d24
---border #232a33  --border-strong #333c47
---ink #e8ebef   --muted #9aa4af   --faint #66707c
---ok #3ecf8e / --ok-bg #10281c
---warn #e8b13f / --warn-bg #292113
---err #ff7a70 / --err-bg #2b1513
---info #6ea8fe / --info-bg #13223b
---track #1d232b
+--bg #f7f6f3 (warm off-white)  --surface #ffffff  --surface-2 #f2f1ed
+--border #e8e6e1  --border-strong #d8d5cf
+--ink #24272b  --ink-hover #3a3e43  --muted #6b7178  --faint #989da3
+--ok #3e8b62/--ok-bg #e9f2ec   --warn #a8802f/--warn-bg #f8f1e0
+--err #ba5c5c/--err-bg #f8eded  --info #587fae/--info-bg #edf1f6
+--track #e6e4de
 ```
 
-- Interactive primary = light ink button (`--ink` bg, `#0c0f13` text), hover pure white.
-- Signal green = live/ok state only (brand dot, pipeline live nodes, step numbers, `:focus-visible`).
-- Bars: semantic mapping (normal/positive→ok, review/mixed→warn,
-  high_priority/negative→err, explicit fail-safes→muted; others info).
+Status colors are tints-on-light (soft sage / amber / rose / steel blue).
+No neon, no glow. Primary button = warm ink. Cards carry the faintest single
+shadow (`0 1px 2px rgba(28,32,30,.04)`) — softness, not decoration.
 
-## Shape & depth
+## Shape / depth
 
-- Radius: card 10 · control 6 · chip 4. Borders 1px; **no shadows, no blur,
-  no pill radius**. One exception: 3px green ring on "live" dots (state, not
-  decoration).
+Radius: card 12 · control 8 · chip 6 (softest accents). 1px borders. No
+Glassmorphism, no pills, no hover-lift.
 
-## Layout / density
+## Layout / density (kept from v3, informally calm)
 
-- Container 1040px, padding 24. Split hero 1.45fr/1fr → single column < 780px.
-- Console chrome: topbar (brand + tag + nav), hero band (micro-label strip),
-  panels with `.panel-head`.
-- Signature elements: (1) console topbar with green brand dot, (2) **pipeline
-  strip** `validate → classify → route → audit` with live dots, (3) **workflow
-  spec list** — mono key/value rows with real system facts, (4) `⌙` trace
-  prefix, (5) numbered steps 01/02/03, (6) colophon footer.
-- Stars/stats: KPI tiles flex min 140px; review rows compact ledger cards.
-
-## Motion
-
-None by default; states only (hover border/color, disabled opacity). Nothing
-animates → reduced-motion is trivially respected.
+Container 1040px; split hero 1.45/1 (<780px stacks); console topbar (sans
+wordmark + soft tag + ghost nav); hero band; workflow spec key/values; quiet
+pipeline line (plain dots, no rings/glow); numbered steps; colophon. Every
+section still carries real system facts — the richness lives in content,
+not chrome.
 
 ## Anti-patterns (blocked)
 
-Purple/blue gradients · multi-color decorative bar palettes · shadows/glass ·
-pill radius · giant centered hero · fake metrics (stats are store-computed
-only, contract exposes "invented metrics: none").
+Neon/glow/terminal aesthetics · mono-uppercase everywhere · purple gradient ·
+dark theme · pills · shadows beyond the 1px soft one · fake metrics (stats
+computed from store only).
 
 ## Pages
 
-- `/` demo: hero thesis + spec + pipeline → input → scenarios (with guard
-  explanation) → result ledger → how-it-works steps → colophon.
-- `/review`: hero + session spec rows → KPI tiles → unit filter tabs → ledger
-  rows → colophon.
-- `/stats`: hero + "invented metrics: none" spec → volume bars → semantic
-  distributions → service-quality KPIs → colophon.
-- `/login`: hero + protection-model spec → form panel.
+Same structure as v3: `/` hero·spec·pipeline → input → scenarios → result
+ledger → steps → colophon; `/review` hero+session → KPI tiles → filters →
+ledger rows; `/stats` hero(+"invented metrics: none") → volume → semantic
+distributions → service KPIs; `/login` hero+protection model → form.

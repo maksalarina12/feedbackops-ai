@@ -1,4 +1,4 @@
-# Visual audit (v3 redesign, 2026-10-29)
+# Visual audit (v4 clean & soft redesign, 2026-10-29)
 
 ## Identity
 - [x] Aesthetic thesis: control-room ops console (dark)
@@ -44,3 +44,13 @@
 - Screenshot assets (docs/*.png) still show v1 — re-capture after deploy
 - Dark theme screenshot legibility should be re-checked in demo.png re-shot
 - n8n cloud demo still runs workflow v1 until user re-imports v2 export
+
+## v4 audit notes (well off 2026-10-29)
+- [x] No dark/terminal relics: grep for #0c0f13/#e8ebef cleared; glow rings
+  removed from CSS; live dots are plain soft-green
+- [x] .btn-solid re-added (was dropped in v3 css rewrite, used by ReviewActions)
+- [x] Review FilterTab active label now white-on-ink (was near-black-on-ink)
+- [x] Class-usage diff vs globals.css: no undefined classes referenced
+- [x] Fonts verified in served CSS chunk (Manrope x-body, JetBrains, tokens)
+- [x] Regression on final sources: tsc clean, build OK, test_api 27/27,
+  routing 8/8, audit 41, slack 7, mcp 18, validate_repo 143/143

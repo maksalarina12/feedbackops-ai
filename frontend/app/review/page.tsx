@@ -72,7 +72,7 @@ function FilterTab({ href, label, active }: { href: string; label: string; activ
       className="btn"
       style={
         active
-          ? { background: "var(--ink)", borderColor: "var(--ink)", color: "#0c0f13", padding: "4px 12px", fontSize: 12 }
+          ? { background: "var(--ink)", borderColor: "var(--ink)", color: "#fff", padding: "4px 12px", fontSize: 12 }
           : { padding: "4px 12px", fontSize: 12 }
       }
     >
