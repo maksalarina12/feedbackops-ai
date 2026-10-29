@@ -29,6 +29,9 @@ human review.
 > [`CASE_STUDY.md`](CASE_STUDY.md) for the problem framing, operating model,
 > KPI targets, rollout phases, and honest production gaps.
 
+**Built by** [PT Arina Digital Mandiri](https://maksalmina-arina.vercel.app) —
+full-stack & AI workflow engineering ([GitHub](https://github.com/maksalarina12)).
+
 ---
 
 ## Table of contents
@@ -529,4 +532,4 @@ feedbackops-ai/
 
 ## License
 
-Released under the [MIT License](LICENSE). © 2026 maksalarina12.
+Released under the [MIT License](LICENSE). © 2026 PT Arina Digital Mandiri.

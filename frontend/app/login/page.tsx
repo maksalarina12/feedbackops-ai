@@ -29,6 +29,17 @@ export default async function LoginPage() {
       <a href="/" style={{ display: "inline-block", marginTop: 18, color: "#4b5563", fontSize: 13 }}>
         Back to demo
       </a>
+      <footer style={{ marginTop: 14, color: "#9ca3af", fontSize: 11 }}>
+        Built by <strong>PT Arina Digital Mandiri</strong> ·{" "}
+        <a
+          href="https://maksalmina-arina.vercel.app"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: "#9ca3af" }}
+        >
+          portfolio
+        </a>
+      </footer>
     </main>
   );
 }

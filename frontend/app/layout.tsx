@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "FeedbackOps AI",
-  description: "Intelligent Customer Feedback Triage and Routing",
+  title: "FeedbackOps AI — PT Arina Digital Mandiri",
+  description:
+    "Intelligent Customer Feedback Triage and Routing. Built by PT Arina Digital Mandiri.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
