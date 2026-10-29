@@ -1,0 +1,65 @@
+{
+  "comment": "Mini knowledge base embedded into the triage workflow to ground suggested responses (mini-RAG). Retrieval is deterministic keyword/phrase scoring; only entries scoring at or above the threshold can ground a suggested response. Guidance text is informational only and never promises refunds, compensation, or account actions.",
+  "entries": [
+    {
+      "id": "kb-shipping-delays",
+      "title": "Shipping delays and tracking",
+      "keywords": ["shipping", "shipment", "delivery", "delivered", "arrived", "tracking", "late", "delayed", "package", "courier", "po box"],
+      "guidance": "Per our shipping policy, domestic orders usually arrive in 3-5 business days and international orders in 7-14 days. Once an order leaves the warehouse, live tracking appears on the order page."
+    },
+    {
+      "id": "kb-damaged-item",
+      "title": "Damaged or defective items",
+      "keywords": ["damaged", "broken", "defective", "cracked", "dented", "leaking", "missing parts", "arrived broken"],
+      "guidance": "Damaged-in-transit items are handled by the support team: report the item and keep the packaging, and the standard process is to inspect the report and prepare a replacement or remedy per the returns policy."
+    },
+    {
+      "id": "kb-billing-charges",
+      "title": "Billing and duplicate charges",
+      "keywords": ["charged", "charge", "charged twice", "billing", "invoice", "receipt", "payment", "duplicate payment", "money taken", "refund"],
+      "guidance": "Duplicate charges are reviewed by the billing team. Statements and receipts are available from the billing page, and every payment record has a transaction ID that the team can trace."
+    },
+    {
+      "id": "kb-app-issues",
+      "title": "App crashes and technical issues",
+      "keywords": ["crash", "crashes", "crashing", "bug", "error", "not loading", "broken app", "slow", "freeze", "frozen", "updates", "upload", "failed"],
+      "guidance": "Known technical issues are tracked by the engineering team. A fresh app install usually resolves client-side problems, and crash reports attached to support tickets shorten diagnosis."
+    },
+    {
+      "id": "kb-support-response",
+      "title": "Support availability and response times",
+      "keywords": ["wait", "waiting", "no reply", "no response", "slow response", "response time", "support hours", "replied", "backlog", "ticket"],
+      "guidance": "Standard support response time is within one business day, and urgent channels run during business hours. Ticket volume spikes can temporarily increase wait times."
+    },
+    {
+      "id": "kb-account-access",
+      "title": "Account and sign-in access",
+      "keywords": ["login", "log in", "sign in", "password", "password reset", "locked out", "account locked", "account access", "verification"],
+      "guidance": "Password resets and account recovery are self-service from the sign-in page. Account locks clear automatically after the cool-down window passes."
+    },
+    {
+      "id": "kb-data-privacy",
+      "title": "Data privacy and deletion requests",
+      "keywords": ["privacy", "personal data", "delete my data", "gdpr", "data deletion", "unsubscribe", "marketing mail", "opt out", " erase"],
+      "guidance": "Data-deletion and opt-out requests are routed to the privacy team, which verifies ownership before erasing personal data in line with the published retention schedule."
+    },
+    {
+      "id": "kb-praise",
+      "title": "Compliments and positive feedback",
+      "keywords": ["thank you", "thanks", "excellent", "great", "love it", "amazing", "works great", "improved", "happy with", "praise", "best"],
+      "guidance": "Positive feedback is shared weekly with the product and support teams, and recurring praise themes are tracked as signals for what to keep doing."
+    },
+    {
+      "id": "kb-feature-requests",
+      "title": "Feature requests and suggestions",
+      "keywords": ["feature", "suggest", "suggestion", "would be nice", "wish it", "please add", "improvement idea", "roadmap"],
+      "guidance": "Feature suggestions are logged for the product team and tagged by theme; popular recurring themes are surfaced on the public roadmap review."
+    },
+    {
+      "id": "kb-holding-units",
+      "title": "Central intake and unit resolution (holding-company pattern)",
+      "keywords": ["holding", "subsidiary", "unit", "branch", "store", "location", "franchise", "division"],
+      "guidance": "Feedback entered without a specific unit stays in the central queue; naming a unit routes visibility to that unit while the group-level audit trail stays unified."
+    }
+  ]
+}

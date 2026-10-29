@@ -60,13 +60,21 @@ function Stat({ label, value, accent }: { label: string; value: number; accent: 
   );
 }
 
-export default async function ReviewPage() {
+export default async function ReviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ unit?: string }>;
+}) {
   const store = await cookies();
   const session = getReviewSession(store.toString());
   if (!session) redirect("/login");
+  const params = await searchParams;
+  const activeUnit = typeof params.unit === "string" && params.unit.trim() ? params.unit.trim() : null;
 
   const state = await readAuditState({ limit: 100 });
-  const { rows, counts } = state;
+  const { rows: allRows, counts } = state;
+  const units = [...new Set(allRows.map((row) => row.unit).filter((unit): unit is string => !!unit))].sort();
+  const rows = activeUnit ? allRows.filter((row) => row.unit === activeUnit) : allRows;
 
   return (
     <main style={{ maxWidth: 960, margin: "40px auto", padding: "0 20px" }}>
@@ -83,6 +91,9 @@ export default async function ReviewPage() {
             {session.username}
           </span>
           <LogoutButton />
+          <Link href="/stats" style={{ color: "#101318", fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 12px", whiteSpace: "nowrap" }}>
+            Stats
+          </Link>
           <Link href="/" style={{ color: "#101318", fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 12px", whiteSpace: "nowrap" }}>
             Back to demo
           </Link>
@@ -96,6 +107,45 @@ export default async function ReviewPage() {
         <Stat label="Auto-processed" value={counts.auto} accent="#0d6d45" />
         <Stat label="Rejected" value={counts.rejected} accent="#4b5563" />
       </section>
+
+      {units.length > 0 && (
+        <section style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "#6b7280" }}>Unit:</span>
+          <Link
+            href="/review"
+            style={{
+              border: activeUnit ? "1px solid #d1d5db" : "1px solid #101318",
+              background: activeUnit ? "#fff" : "#101318",
+              color: activeUnit ? "#101318" : "#fff",
+              borderRadius: 999,
+              padding: "4px 12px",
+              fontSize: 12,
+              fontWeight: 600,
+              textDecoration: "none",
+            }}
+          >
+            all
+          </Link>
+          {units.map((unit) => (
+            <Link
+              key={unit}
+              href={`/review?unit=${encodeURIComponent(unit)}`}
+              style={{
+                border: activeUnit === unit ? "1px solid #101318" : "1px solid #d1d5db",
+                background: activeUnit === unit ? "#101318" : "#fff",
+                color: activeUnit === unit ? "#fff" : "#101318",
+                borderRadius: 999,
+                padding: "4px 12px",
+                fontSize: 12,
+                fontWeight: 600,
+                textDecoration: "none",
+              }}
+            >
+              {unit}
+            </Link>
+          ))}
+        </section>
+      )}
 
       {rows.length === 0 ? (
         <section style={{ background: "#fff", border: "1px dashed #d1d5db", borderRadius: 10, padding: 28, textAlign: "center" }}>
@@ -129,6 +179,16 @@ export default async function ReviewPage() {
                     {row.source && (
                       <span style={{ color: "#6b7280", fontSize: 12 }}>via {row.source}</span>
                     )}
+                    {row.unit && (
+                      <span style={{ background: "#eef1f4", color: "#384151", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                        unit: {row.unit}
+                      </span>
+                    )}
+                    {row.response_grounded === true && row.kb_source && (
+                      <span style={{ background: "#e8f1fb", color: "#1e4e8c", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>
+                        KB: {row.kb_source}
+                      </span>
+                    )}
                   </div>
                   <div style={{ color: "#9ca3af", fontSize: 11 }}>{formatDate(row.created_at)}</div>
                 </div>
@@ -151,6 +211,9 @@ export default async function ReviewPage() {
                       </div>
                     )}
                     {row.llm_error && <div style={{ color: "#8a5a08" }}>llm_note: {row.llm_error}</div>}
+                    {Array.isArray(row.routing_reasons) && row.routing_reasons.length > 0 && (
+                      <div>routed because: {row.routing_reasons.join("; ")}</div>
+                    )}
                   </div>
                   {canReview && <ReviewActions requestId={row.request_id} resolved={resolved} />}
                 </div>

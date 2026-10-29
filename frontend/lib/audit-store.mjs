@@ -28,6 +28,22 @@ function redact(value, max = MAX_STRING) {
   return result;
 }
 
+function stringArray(value, max = MAX_STRING) {
+  let list = value;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(list)) return null;
+  const cleaned = list
+    .filter((item) => typeof item === "string" && item.trim() !== "")
+    .map((item) => redact(item, max));
+  return cleaned.length > 0 ? cleaned : null;
+}
+
 export function storePath() {
   return process.env.AUDIT_DB_PATH || path.join(process.cwd(), ".data", "audit.sqlite");
 }
@@ -128,11 +144,13 @@ export async function appendAuditRow(row) {
     created_at: text(row.created_at, 40) || new Date().toISOString(),
     stored_at: new Date().toISOString(),
     source: redact(row.source, 64),
+    unit: text(row.unit, 64),
     sentiment: text(row.sentiment, 32),
     category: text(row.category, 32),
     urgency: text(row.urgency, 32),
     summary: redact(row.summary),
     routing_decision: text(row.routing_decision, 32),
+    routing_reasons: stringArray(row.routing_reasons),
     review_status: row.review_status === "needs_review"
       ? "needs_review"
       : row.review_status === "auto"
@@ -140,6 +158,9 @@ export async function appendAuditRow(row) {
         : null,
     status: text(row.status, 32),
     error_code: text(row.error_code, 64),
+    suggested_response: redact(row.suggested_response),
+    response_grounded: typeof row.response_grounded === "boolean" ? row.response_grounded : null,
+    kb_source: text(row.kb_source, 64),
     llm_error: redact(row.llm_error, 128),
     processing_duration_ms: number(row.processing_duration_ms),
   };
@@ -227,14 +248,19 @@ export async function readAuditState({ limit = 100 } = {}) {
       request_id: row.request_id,
       created_at: audit.created_at || row.created_at || null,
       source: audit.source || null,
+      unit: audit.unit || null,
       sentiment: audit.sentiment || null,
       category: audit.category || null,
       urgency: audit.urgency || null,
       summary: audit.summary || null,
       routing_decision: audit.routing_decision || null,
+      routing_reasons: stringArray(audit.routing_reasons),
       review_status: review ? review.review_status : audit.review_status || null,
       status: audit.status || null,
       error_code: audit.error_code || null,
+      suggested_response: audit.suggested_response || null,
+      response_grounded: audit.response_grounded || null,
+      kb_source: audit.kb_source || null,
       llm_error: audit.llm_error || null,
       processing_duration_ms: audit.processing_duration_ms ?? null,
       review_note: review ? review.note || null : null,
@@ -255,6 +281,110 @@ export async function readAuditState({ limit = 100 } = {}) {
     rows: all.slice(0, Math.max(1, Math.min(limit, 500))),
     counts,
     total: all.length,
+    store: storePath(),
+  };
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+
+export async function readAuditStats({ days = 7 } = {}) {
+  const window = Math.max(1, Math.min(Number(days) || 7, 90));
+  const cutoff = new Date(Date.now() - window * 24 * HOUR_MS).toISOString();
+  const db = await openDb();
+
+  const auditRows = db
+    .prepare("SELECT created_at, payload FROM audit_events WHERE type = 'audit' AND created_at >= ? ORDER BY created_at ASC")
+    .all(cutoff);
+
+  const reviewRows = db
+    .prepare("SELECT request_id, payload FROM audit_events WHERE type = 'review' AND created_at >= ? ORDER BY id ASC")
+    .all(cutoff);
+
+  const parsed = [];
+  for (const row of auditRows) {
+    try {
+      parsed.push({ created_at: row.created_at, audit: JSON.parse(row.payload) });
+    } catch {
+      // skip malformed rows rather than failing the report
+    }
+  }
+
+  const tally = (rows, key) => {
+    const map = new Map();
+    for (const item of rows) {
+      const value = key(item) || "unknown";
+      map.set(value, (map.get(value) || 0) + 1);
+    }
+    return Object.fromEntries([...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
+  };
+
+  const byRoute = tally(parsed, (item) => item.audit.routing_decision);
+  const byCategory = tally(parsed, (item) => item.audit.category);
+  const bySentiment = tally(parsed, (item) => item.audit.sentiment);
+  const byUnit = tally(parsed.filter((item) => item.audit.unit), (item) => item.audit.unit);
+
+  const durations = parsed
+    .map((item) => item.audit.processing_duration_ms)
+    .filter((value) => typeof value === "number" && Number.isFinite(value) && value >= 0);
+  const avgProcessingMs = durations.length
+    ? Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length)
+    : null;
+
+  const daily = [];
+  for (let back = window - 1; back >= 0; back -= 1) {
+    const start = new Date(Date.now() - back * 24 * HOUR_MS);
+    const day = start.toISOString().slice(0, 10);
+    daily.push({ day, total: 0 });
+  }
+  for (const item of parsed) {
+    const day = (item.created_at || item.audit.created_at || "").slice(0, 10);
+    const bucket = daily.find((entry) => entry.day === day);
+    if (bucket) bucket.total += 1;
+  }
+
+  const resolutions = new Map();
+  for (const row of reviewRows) {
+    try {
+      const event = JSON.parse(row.payload);
+      if (event && (event.review_status === "resolved" || event.review_status === "needs_review")) {
+        resolutions.set(row.request_id, event.review_status);
+      }
+    } catch {
+      // ignore malformed review events
+    }
+  }
+  let resolved = 0;
+  let needsReview = 0;
+  for (const request of new Set(parsed.map((item) => item.audit.request_id).filter(Boolean))) {
+    const status = resolutions.get(request) || (parsed.find((item) => item.audit.request_id === request)?.audit.review_status);
+    if (status === "resolved") resolved += 1;
+    else if (status === "needs_review") needsReview += 1;
+  }
+
+  const reviewRequired = parsed.filter((item) => item.audit.review_status === "needs_review").length;
+  const auto = parsed.filter((item) => item.audit.review_status === "auto").length;
+  const rejected = parsed.filter((item) => item.audit.status === "rejected_pre_llm").length;
+  const grounded = parsed.filter((item) => item.audit.response_grounded === true).length;
+  const withSuggestion = parsed.filter((item) => item.audit.suggested_response).length;
+
+  return {
+    window_days: window,
+    cutoff,
+    total: parsed.length,
+    counts: { total: parsed.length, review_required: reviewRequired, auto, rejected, resolved, needs_review: needsReview },
+    by_route: byRoute,
+    by_category: byCategory,
+    by_sentiment: bySentiment,
+    by_unit: byUnit,
+    service: {
+      avg_processing_ms: avgProcessingMs,
+      rejection_rate: parsed.length ? Number((rejected / parsed.length).toFixed(4)) : 0,
+      review_rate: parsed.length ? Number((reviewRequired / parsed.length).toFixed(4)) : 0,
+      resolution_rate: resolved + needsReview ? Number((resolved / (resolved + needsReview)).toFixed(4)) : null,
+      grounding_rate: withSuggestion ? Number((grounded / withSuggestion).toFixed(4)) : null,
+      llm_error_count: parsed.filter((item) => item.audit.llm_error).length,
+    },
+    daily,
     store: storePath(),
   };
 }

@@ -59,17 +59,43 @@ for (const testCase of cases) {
   const suggestedOk = testCase.route === "normal"
     ? typeof output.suggested_response === "string" && output.suggested_response.length > 0
     : output.suggested_response === null;
+  const reasonsOk = Array.isArray(output.routing_reasons) && output.routing_reasons.length > 0;
 
-  if (routeOk && reviewOk && suggestedOk) {
+  if (routeOk && reviewOk && suggestedOk && reasonsOk) {
     console.log(`PASS - ${testCase.name}`);
   } else {
     failed += 1;
     console.error(
       `FAIL - ${testCase.name}: route=${output.routing_decision} ` +
-      `review=${output.review_required} suggested=${JSON.stringify(output.suggested_response)}`
+      `review=${output.review_required} suggested=${JSON.stringify(output.suggested_response)} ` +
+      `reasons=${JSON.stringify(output.routing_reasons)}`
     );
   }
 }
 
-console.log(`\n== ROUTING: ${cases.length - failed}/${cases.length} passed ==`);
+// Grounding behavior: normal routes pick an entry from the embedded KB or fall
+// back to the generic ack; ungrounded normal routes flag response_grounded=false.
+const groundedOk = (() => {
+  const out = run({ llm_error: null, feedback: "My package arrived late and tracking has not updated.", result: { sentiment: "negative", category: "shipping", urgency: "low" } })[0].json;
+  return out.response_grounded === true && out.kb_source === "kb-shipping-delays";
+})();
+if (groundedOk) {
+  console.log("PASS - grounded KB retrieval selects kb-shipping-delays");
+} else {
+  failed += 1;
+  console.error("FAIL - grounded KB retrieval did not select kb-shipping-delays");
+}
+
+const ungroundedOk = (() => {
+  const out = run({ llm_error: null, feedback: "Random gibberish zsxqvtkp about nothing.", result: { sentiment: "neutral", category: "general", urgency: "low" } })[0].json;
+  return out.response_grounded === false && out.kb_source === null && out.suggested_response.includes("logged it");
+})();
+if (ungroundedOk) {
+  console.log("PASS - ungrounded normal route falls back to generic response");
+} else {
+  failed += 1;
+  console.error("FAIL - ungrounded normal route flags/fields wrong:", JSON.stringify({ grounded: ungroundedOk }));
+}
+
+console.log(`\n== ROUTING: ${cases.length + 2 - failed}/${cases.length + 2} passed ==`);
 process.exit(failed === 0 ? 0 : 1);

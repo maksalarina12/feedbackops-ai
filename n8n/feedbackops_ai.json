@@ -2,7 +2,7 @@
   "name": "FeedbackOps AI - Feedback Triage",
   "nodes": [
     {
-      "id": "aae79ef6-1aeb-435c-b359-72dbd3b478af",
+      "id": "035beecc-83f4-426d-b387-b5c34dfc9826",
       "name": "Feedback Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -10,7 +10,7 @@
         -160,
         240
       ],
-      "webhookId": "9edfeced-976c-4bda-a88f-02a96d63b620",
+      "webhookId": "34cc8f65-8b4e-4f7a-a988-c5e9d13a2537",
       "parameters": {
         "httpMethod": "POST",
         "path": "feedbackops",
@@ -27,7 +27,7 @@
       "notes": "Entry point. POST JSON: {feedback, source?, request_id?}. Requires the X-Webhook-Secret header configured in the webhook Header Auth credential."
     },
     {
-      "id": "f5b725ee-abc0-4c97-ae0f-b3973f6b12b2",
+      "id": "eb952560-6acf-4565-af92-497d3c741b77",
       "name": "Validate & Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -36,11 +36,11 @@
         240
       ],
       "parameters": {
-        "jsCode": "// Validate & normalize inbound feedback. Input is never trusted.\nconst body = $json.body ?? null;\nconst MAX = 2000;\nconst problems = [];\nconst isObj = body && typeof body === 'object' && !Array.isArray(body);\nlet feedback = null;\nlet source = 'unknown';\nlet requestId = null;\n\nif (!isObj) {\n  problems.push('invalid_body');\n} else {\n  if (typeof body.feedback !== 'string') {\n    problems.push('feedback_missing_or_not_string');\n  } else {\n    const t = body.feedback.trim();\n    if (t.length === 0) problems.push('feedback_empty');\n    else if (t.length > MAX) problems.push(`feedback_exceeds_${MAX}_chars`);\n    else feedback = t;\n  }\n  if (body.source !== undefined && body.source !== null) {\n    if (typeof body.source !== 'string') problems.push('source_not_string');\n    else source = body.source.slice(0, 64);\n  }\n  if (body.request_id !== undefined && body.request_id !== null) {\n    if (typeof body.request_id !== 'string') problems.push('request_id_not_string');\n    else if (body.request_id.length > 128) problems.push('request_id_too_long');\n    else requestId = body.request_id.trim();\n  }\n}\nif (!requestId) {\n  requestId = (globalThis.crypto && crypto.randomUUID)\n    ? crypto.randomUUID()\n    : 'req-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\n}\n// Demo-grade idempotency: remember request_ids across production executions\n// (in-memory of n8n process; lost on restart; capped). NOT a production\n// exactly-once guarantee.\nconst stat = $getWorkflowStaticData('global');\nstat.seenIds = stat.seenIds || {};\nconst CAP = 1000;\nconst keys = Object.keys(stat.seenIds);\nif (keys.length >= CAP) for (const k of keys.slice(0, keys.length - CAP + 1)) delete stat.seenIds[k];\nif (stat.seenIds[requestId]) {\n  problems.push('duplicate_request_id');\n} else if (problems.length === 0) {\n  stat.seenIds[requestId] = true;\n}\n\nreturn [{\n  json: {\n    valid: problems.length === 0,\n    problems,\n    request_id: requestId,\n    feedback,\n    source,\n    received_at: new Date().toISOString(),\n  },\n}];\n"
+        "jsCode": "// Validate & normalize inbound feedback. Input is never trusted.\nconst body = $json.body ?? null;\nconst MAX = 2000;\nconst problems = [];\nconst isObj = body && typeof body === 'object' && !Array.isArray(body);\nlet feedback = null;\nlet source = 'unknown';\nlet unit = null;\nlet requestId = null;\n\nif (!isObj) {\n  problems.push('invalid_body');\n} else {\n  if (typeof body.feedback !== 'string') {\n    problems.push('feedback_missing_or_not_string');\n  } else {\n    const t = body.feedback.trim();\n    if (t.length === 0) problems.push('feedback_empty');\n    else if (t.length > MAX) problems.push(`feedback_exceeds_${MAX}_chars`);\n    else feedback = t;\n  }\n  if (body.source !== undefined && body.source !== null) {\n    if (typeof body.source !== 'string') problems.push('source_not_string');\n    else source = body.source.slice(0, 64);\n  }\n  let unitDeclared = null;\n  if (body.unit !== undefined && body.unit !== null) {\n    if (typeof body.unit !== 'string') problems.push('unit_not_string');\n    else {\n      const u = body.unit.trim();\n      if (u.length === 0) unitDeclared = null;\n      else if (u.length > 64) problems.push('unit_exceeds_64_chars');\n      else unitDeclared = u;\n    }\n  }\n  if (body.request_id !== undefined && body.request_id !== null) {\n    if (typeof body.request_id !== 'string') problems.push('request_id_not_string');\n    else if (body.request_id.length > 128) problems.push('request_id_too_long');\n    else requestId = body.request_id.trim();\n    }\n}\nif (isObj) unit = unitDeclared;\nif (!requestId) {\n  requestId = (globalThis.crypto && crypto.randomUUID)\n    ? crypto.randomUUID()\n    : 'req-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);\n}\n// Demo-grade idempotency: remember request_ids across production executions\n// (in-memory of n8n process; lost on restart; capped). NOT a production\n// exactly-once guarantee.\nconst stat = $getWorkflowStaticData('global');\nstat.seenIds = stat.seenIds || {};\nconst CAP = 1000;\nconst keys = Object.keys(stat.seenIds);\nif (keys.length >= CAP) for (const k of keys.slice(0, keys.length - CAP + 1)) delete stat.seenIds[k];\nif (stat.seenIds[requestId]) {\n  problems.push('duplicate_request_id');\n} else if (problems.length === 0) {\n  stat.seenIds[requestId] = true;\n}\n\nreturn [{\n  json: {\n    valid: problems.length === 0,\n    problems,\n    request_id: requestId,\n    feedback,\n    source,\n    unit,\n    received_at: new Date().toISOString(),\n  },\n}];\n"
       }
     },
     {
-      "id": "a1678b35-256b-42aa-afea-d30c99f7179b",
+      "id": "3850b78d-e234-44bf-b7fc-7a4775dcb53d",
       "name": "Input Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -73,7 +73,7 @@
       }
     },
     {
-      "id": "a0cb8162-a74a-4b8d-94cb-ae4ca56ccaad",
+      "id": "b53fd7b4-d565-45de-a832-9045e942ba70",
       "name": "Gemini Classify",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -104,7 +104,7 @@
       "notes": "LLM adapter. Provider-agnostic at the boundary: same shape (text in -> validated JSON out) works for the Claude adapter."
     },
     {
-      "id": "267f5840-173c-4cd4-9648-ed9dd6ac850c",
+      "id": "f325deff-b531-41b4-9faa-33d9f2234a7d",
       "name": "Validate LLM Output",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -113,12 +113,12 @@
         140
       ],
       "parameters": {
-        "jsCode": "// Structured-output validation: never trust raw LLM JSON.\n// Fails safe: any unparseable/enum-invalid output becomes a review fallback.\nconst ven = $('Validate & Normalize').first().json;\nconst i = $json;\nconst duration_ms = Math.max(0, Date.now() - Date.parse(ven.received_at)) || 0;\n\nconst ALLOWED = {\n  sentiment: ['positive', 'neutral', 'negative', 'mixed', 'unknown'],\n  category: ['product_quality', 'shipping', 'billing', 'technical_issue', 'customer_support', 'general', 'unknown'],\n  urgency: ['low', 'medium', 'high', 'unknown'],\n};\n\nlet llm_error = null;\nlet result = null;\n\ntry {\n  const cand = i && i.candidates && i.candidates[0];\n  const parts = (cand && cand.content && cand.content.parts) || [];\n  const text = parts.map((p) => p.text || '').join('');\n  if (!cand || !text) throw new Error('empty_response');\n  const parsed = JSON.parse(text);\n  result = {};\n  for (const field of ['sentiment', 'category', 'urgency']) {\n    let v = parsed ? parsed[field] : undefined;\n    if (typeof v !== 'string') { v = 'unknown'; llm_error = llm_error || 'invalid_llm_field_' + field; }\n    v = v.trim().toLowerCase();\n    if (!ALLOWED[field].includes(v)) { v = 'unknown'; llm_error = llm_error || 'enum_violation_' + field; }\n    result[field] = v;\n  }\n  result.summary = typeof (parsed || {}).summary === 'string' ? parsed.summary.slice(0, 200) : 'No summary provided by model.';\n} catch (e) {\n  llm_error = llm_error || 'unparseable_llm_json';\n  result = {\n    sentiment: 'unknown',\n    category: 'unknown',\n    urgency: 'unknown',\n    summary: 'AI output could not be validated; queued for human review.',\n  };\n}\n\nreturn [{ json: {\n  request_id: ven.request_id,\n  source: ven.source,\n  received_at: ven.received_at,\n  duration_ms,\n  result,\n  llm_error,\n}}];\n"
+        "jsCode": "// Structured-output validation: never trust raw LLM JSON.\n// Fails safe: any unparseable/enum-invalid output becomes a review fallback.\nconst ven = $('Validate & Normalize').first().json;\nconst i = $json;\nconst duration_ms = Math.max(0, Date.now() - Date.parse(ven.received_at)) || 0;\n\nconst ALLOWED = {\n  sentiment: ['positive', 'neutral', 'negative', 'mixed', 'unknown'],\n  category: ['product_quality', 'shipping', 'billing', 'technical_issue', 'customer_support', 'general', 'unknown'],\n  urgency: ['low', 'medium', 'high', 'unknown'],\n};\n\nlet llm_error = null;\nlet result = null;\n\ntry {\n  const cand = i && i.candidates && i.candidates[0];\n  const parts = (cand && cand.content && cand.content.parts) || [];\n  const text = parts.map((p) => p.text || '').join('');\n  if (!cand || !text) throw new Error('empty_response');\n  const parsed = JSON.parse(text);\n  result = {};\n  for (const field of ['sentiment', 'category', 'urgency']) {\n    let v = parsed ? parsed[field] : undefined;\n    if (typeof v !== 'string') { v = 'unknown'; llm_error = llm_error || 'invalid_llm_field_' + field; }\n    v = v.trim().toLowerCase();\n    if (!ALLOWED[field].includes(v)) { v = 'unknown'; llm_error = llm_error || 'enum_violation_' + field; }\n    result[field] = v;\n  }\n  result.summary = typeof (parsed || {}).summary === 'string' ? parsed.summary.slice(0, 200) : 'No summary provided by model.';\n} catch (e) {\n  llm_error = llm_error || 'unparseable_llm_json';\n  result = {\n    sentiment: 'unknown',\n    category: 'unknown',\n    urgency: 'unknown',\n    summary: 'AI output could not be validated; queued for human review.',\n  };\n}\n\nreturn [{ json: {\n  request_id: ven.request_id,\n  source: ven.source,\n  unit: ven.unit,\n  received_at: ven.received_at,\n  duration_ms,\n  result,\n  llm_error,\n}}];\n"
       },
       "notes": "Second layer of defense: responseSchema enforcement is NOT enough; enums are re-checked here (models do drift)."
     },
     {
-      "id": "cdc38521-96a4-4b6a-bd4a-4fd756bd7fff",
+      "id": "5862d504-4ad6-4ee3-9213-05147b589f68",
       "name": "Deterministic Routing",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -127,12 +127,12 @@
         140
       ],
       "parameters": {
-        "jsCode": "// Deterministic routing: pure rules, no LLM in the decision path.\nconst i = $json;\nconst r = i.result || {};\nlet route;\nif (i.llm_error) route = 'review';\nelse if (r.urgency === 'high') route = 'high_priority';\nelse if (r.category === 'unknown' || r.sentiment === 'unknown' || r.urgency === 'unknown') route = 'review';\nelse route = 'normal';\n\nreturn [{ json: {\n  ...i,\n  routing_decision: route,\n  review_required: route !== 'normal',\n  suggested_response: route === 'normal'\n    ? `Thank you for your feedback. Our team has logged it (ref ${i.request_id}) and will follow up if needed.`\n    : null,\n}}];\n"
+        "jsCode": "// Deterministic routing: pure rules, no LLM in the decision path.\n// This node also performs the mini-RAG retrieval that grounds suggested\n// responses for the normal route. It never calls any external service.\nconst i = $json;\nconst r = i.result || {};\nconst reasons = [];\n\nlet route;\nif (i.llm_error) {\n  route = 'review';\n  reasons.push('llm_error -> safe review fallback (output not trusted)');\n}\nif (r.urgency === 'high' && !i.llm_error) {\n  route = 'high_priority';\n  reasons.push('urgency=high -> high-priority review queue');\n}\nif (!i.llm_error && route !== 'high_priority' && (r.category === 'unknown' || r.sentiment === 'unknown' || r.urgency === 'unknown')) {\n  route = 'review';\n  reasons.push('unknown classification field -> human review instead of a guess');\n}\nif (!route) {\n  route = 'normal';\n  reasons.push('all fields validated -> routine processing');\n}\n\n// Mini-RAG grounding (deterministic keyword retrieval over the embedded KB).\nconst KB = [{\"id\": \"kb-shipping-delays\", \"title\": \"Shipping delays and tracking\", \"keywords\": [\"shipping\", \"shipment\", \"delivery\", \"delivered\", \"arrived\", \"tracking\", \"late\", \"delayed\", \"package\", \"courier\", \"po box\"], \"guidance\": \"Per our shipping policy, domestic orders usually arrive in 3-5 business days and international orders in 7-14 days. Once an order leaves the warehouse, live tracking appears on the order page.\"}, {\"id\": \"kb-damaged-item\", \"title\": \"Damaged or defective items\", \"keywords\": [\"damaged\", \"broken\", \"defective\", \"cracked\", \"dented\", \"leaking\", \"missing parts\", \"arrived broken\"], \"guidance\": \"Damaged-in-transit items are handled by the support team: report the item and keep the packaging, and the standard process is to inspect the report and prepare a replacement or remedy per the returns policy.\"}, {\"id\": \"kb-billing-charges\", \"title\": \"Billing and duplicate charges\", \"keywords\": [\"charged\", \"charge\", \"charged twice\", \"billing\", \"invoice\", \"receipt\", \"payment\", \"duplicate payment\", \"money taken\", \"refund\"], \"guidance\": \"Duplicate charges are reviewed by the billing team. Statements and receipts are available from the billing page, and every payment record has a transaction ID that the team can trace.\"}, {\"id\": \"kb-app-issues\", \"title\": \"App crashes and technical issues\", \"keywords\": [\"crash\", \"crashes\", \"crashing\", \"bug\", \"error\", \"not loading\", \"broken app\", \"slow\", \"freeze\", \"frozen\", \"updates\", \"upload\", \"failed\"], \"guidance\": \"Known technical issues are tracked by the engineering team. A fresh app install usually resolves client-side problems, and crash reports attached to support tickets shorten diagnosis.\"}, {\"id\": \"kb-support-response\", \"title\": \"Support availability and response times\", \"keywords\": [\"wait\", \"waiting\", \"no reply\", \"no response\", \"slow response\", \"response time\", \"support hours\", \"replied\", \"backlog\", \"ticket\"], \"guidance\": \"Standard support response time is within one business day, and urgent channels run during business hours. Ticket volume spikes can temporarily increase wait times.\"}, {\"id\": \"kb-account-access\", \"title\": \"Account and sign-in access\", \"keywords\": [\"login\", \"log in\", \"sign in\", \"password\", \"password reset\", \"locked out\", \"account locked\", \"account access\", \"verification\"], \"guidance\": \"Password resets and account recovery are self-service from the sign-in page. Account locks clear automatically after the cool-down window passes.\"}, {\"id\": \"kb-data-privacy\", \"title\": \"Data privacy and deletion requests\", \"keywords\": [\"privacy\", \"personal data\", \"delete my data\", \"gdpr\", \"data deletion\", \"unsubscribe\", \"marketing mail\", \"opt out\", \" erase\"], \"guidance\": \"Data-deletion and opt-out requests are routed to the privacy team, which verifies ownership before erasing personal data in line with the published retention schedule.\"}, {\"id\": \"kb-praise\", \"title\": \"Compliments and positive feedback\", \"keywords\": [\"thank you\", \"thanks\", \"excellent\", \"great\", \"love it\", \"amazing\", \"works great\", \"improved\", \"happy with\", \"praise\", \"best\"], \"guidance\": \"Positive feedback is shared weekly with the product and support teams, and recurring praise themes are tracked as signals for what to keep doing.\"}, {\"id\": \"kb-feature-requests\", \"title\": \"Feature requests and suggestions\", \"keywords\": [\"feature\", \"suggest\", \"suggestion\", \"would be nice\", \"wish it\", \"please add\", \"improvement idea\", \"roadmap\"], \"guidance\": \"Feature suggestions are logged for the product team and tagged by theme; popular recurring themes are surfaced on the public roadmap review.\"}, {\"id\": \"kb-holding-units\", \"title\": \"Central intake and unit resolution (holding-company pattern)\", \"keywords\": [\"holding\", \"subsidiary\", \"unit\", \"branch\", \"store\", \"location\", \"franchise\", \"division\"], \"guidance\": \"Feedback entered without a specific unit stays in the central queue; naming a unit routes visibility to that unit while the group-level audit trail stays unified.\"}];\nlet kbSource = null;\nlet grounded = false;\nlet suggested_response = null;\nif (route === 'normal') {\n  const hay = String(i.feedback || '').toLowerCase();\n  const tokenSet = new Set(hay.match(/[a-z0-9]+/g) || []);\n  let best = null;\n  let bestScore = 0;\n  for (const entry of KB) {\n    let score = 0;\n    for (const kw of entry.keywords) {\n      if (kw.includes(' ')) { if (hay.includes(kw)) score += 3; }\n      else if (tokenSet.has(kw)) score += 2;\n    }\n    if (score > bestScore) { bestScore = score; best = entry; }\n  }\n  if (best && bestScore >= 3) {\n    grounded = true;\n    kbSource = best.id;\n    suggested_response =\n      'Thank you for your feedback. Reference: ' + best.title + ' \u2014 ' + best.guidance +\n      ' (ref ' + i.request_id + ')';\n  } else {\n    suggested_response =\n      'Thank you for your feedback. Our team has logged it (ref ' + i.request_id + ') and will follow up if needed.';\n  }\n}\n\nreturn [{ json: {\n  ...i,\n  routing_decision: route,\n  routing_reasons: reasons,\n  review_required: route !== 'normal',\n  suggested_response,\n  response_grounded: route === 'normal' ? grounded : null,\n  kb_source: grounded ? kbSource : null,\n}}];\n"
       },
-      "notes": "The LLM proposes; THIS node disposes. Business rules live here only."
+      "notes": "The LLM proposes; THIS node disposes. Business rules live here only. Also performs the deterministic mini-RAG retrieval over the embedded knowledge base to ground suggested responses for the normal route."
     },
     {
-      "id": "8f9180d2-9ecf-4152-8afa-cecbe0574501",
+      "id": "6ff6f2bc-50aa-482b-9d97-4b3f5df34a8b",
       "name": "Build Success Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -141,11 +141,11 @@
         140
       ],
       "parameters": {
-        "jsCode": "// Build the structured success response for the caller.\nconst i = $json;\nreturn [{ json: {\n  ...i,\n  final_response: {\n    success: true,\n    request_id: i.request_id,\n    result: i.result,\n    routing_decision: i.routing_decision,\n    review_required: i.review_required,\n    suggested_response: i.suggested_response,\n    llm: { provider: 'gemini', model: 'gemini-3.5-flash', llm_error: i.llm_error },\n    processing_duration_ms: i.duration_ms,\n    error: null,\n  },\n}}];\n"
+        "jsCode": "// Build the structured success response for the caller.\nconst i = $json;\nreturn [{ json: {\n  ...i,\n  final_response: {\n    success: true,\n    request_id: i.request_id,\n    unit: i.unit,\n    result: i.result,\n    routing_decision: i.routing_decision,\n    routing_reasons: i.routing_reasons,\n    review_required: i.review_required,\n    suggested_response: i.suggested_response,\n    response_grounded: i.response_grounded,\n    kb_source: i.kb_source,\n    llm: { provider: 'gemini', model: 'gemini-3.5-flash', llm_error: i.llm_error },\n    processing_duration_ms: i.duration_ms,\n    error: null,\n  },\n}}];\n"
       }
     },
     {
-      "id": "7bf40dfa-2313-4770-b876-77420e32706b",
+      "id": "94754f13-d353-4fe7-a83c-28b9f674464d",
       "name": "Prepare Escalation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -159,7 +159,7 @@
       "notes": "Side branch only. Escalation is opt-in via ESCALATION_WEBHOOK_URL and cannot change the triage response."
     },
     {
-      "id": "7441e56f-f53f-4972-9ce9-b823c208c142",
+      "id": "262444f0-8731-43a0-b19e-689e313e75c4",
       "name": "Escalation Needed?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -192,7 +192,7 @@
       }
     },
     {
-      "id": "ee69c8b8-7215-429c-8d6a-003c7f1c2ede",
+      "id": "67e222d5-f416-461c-a521-dd9c8456d372",
       "name": "Notify Escalation",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -223,7 +223,7 @@
       "notes": "Fire-and-forget hand-off to the escalation workflow. A failure here never affects triage."
     },
     {
-      "id": "5f2ba888-6270-4826-a8b9-7cc116c3f8d0",
+      "id": "1de7586b-0325-4f98-9e3f-7a1cf819ce09",
       "name": "Escalation Done",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
@@ -234,7 +234,7 @@
       "parameters": {}
     },
     {
-      "id": "2faa9ca5-a005-4858-8dea-06adf83484e2",
+      "id": "414962f4-1977-4d29-b32c-3973c71fd4c3",
       "name": "Prepare Audit Persist",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -248,7 +248,7 @@
       "notes": "Side branch. Persists the audit row to the frontend review queue when AUDIT_WEBHOOK_URL is set."
     },
     {
-      "id": "162b5f72-b2f0-4364-89b4-ddc2be32c4b1",
+      "id": "4fd8b4dc-69c3-47d1-8a2e-2d877c30feed",
       "name": "Audit Persist Enabled?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -281,7 +281,7 @@
       }
     },
     {
-      "id": "d3c88c86-18e0-4c8c-9830-e150d2e42579",
+      "id": "7c7cf1df-7ed3-48ae-87e3-eab27af0859d",
       "name": "Persist Audit",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -325,7 +325,7 @@
       "notes": "Fire-and-forget audit persistence to /api/audit. Failures are logged, never surfaced to the caller."
     },
     {
-      "id": "9e55b308-5680-4e6e-94c8-b5ff9a609fe7",
+      "id": "59a8288e-2c3f-4bdc-a436-2e32f5ef78f6",
       "name": "Audit Persisted",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
@@ -336,7 +336,7 @@
       "parameters": {}
     },
     {
-      "id": "02bb3194-5b61-4792-847a-89f41a9fda24",
+      "id": "4c26e6a3-7e58-490b-81c5-ea84d5be1f16",
       "name": "Build Error Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -349,7 +349,7 @@
       }
     },
     {
-      "id": "1b218e35-a362-41b1-86f2-316a0b558cc7",
+      "id": "2418a8ec-d727-4e14-a62c-937fafc78e49",
       "name": "Audit Log (local)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -358,11 +358,11 @@
         240
       ],
       "parameters": {
-        "jsCode": "// Build the audit row once, log it locally, and let the adjacent side branch\n// persist it to the review queue when AUDIT_WEBHOOK_URL is configured.\n// Keep this shape stable: the store and dashboard depend on it.\nconst i = $json;\nlet row;\nif (!i.final_response) {\n  row = { request_id: i.request_id, status: 'unknown_state', created_at: new Date().toISOString() };\n} else if (i.final_response.success === false) {\n  row = {\n    request_id: i.final_response.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    status: 'rejected_pre_llm',\n    error_code: i.final_response.error.code,\n  };\n} else {\n  const f = i.final_response;\n  row = {\n    request_id: f.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    sentiment: (f.result || {}).sentiment,\n    category: (f.result || {}).category,\n    urgency: (f.result || {}).urgency,\n    summary: (f.result || {}).summary,\n    routing_decision: f.routing_decision,\n    review_status: f.review_required ? 'needs_review' : 'auto',\n    llm_error: (f.llm || {}).llm_error,\n    processing_duration_ms: f.processing_duration_ms,\n  };\n}\nconsole.log('[AUDIT] ' + JSON.stringify(row));\nreturn [{ json: { ...i, audit_row: row } }];\n"
+        "jsCode": "// Build the audit row once, log it locally, and let the adjacent side branch\n// persist it to the review queue when AUDIT_WEBHOOK_URL is configured.\n// Keep this shape stable: the store and dashboard depend on it.\nconst i = $json;\nlet row;\nif (!i.final_response) {\n  row = { request_id: i.request_id, status: 'unknown_state', created_at: new Date().toISOString() };\n} else if (i.final_response.success === false) {\n  row = {\n    request_id: i.final_response.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    unit: i.unit || null,\n    status: 'rejected_pre_llm',\n    routing_reasons: ['rejected before the LLM ran: ' + (i.problems || []).join(', ')],\n    error_code: i.final_response.error.code,\n  };\n} else {\n  const f = i.final_response;\n  row = {\n    request_id: f.request_id,\n    created_at: new Date().toISOString(),\n    source: i.source || null,\n    unit: i.unit || null,\n    sentiment: (f.result || {}).sentiment,\n    category: (f.result || {}).category,\n    urgency: (f.result || {}).urgency,\n    summary: (f.result || {}).summary,\n    routing_decision: f.routing_decision,\n    routing_reasons: f.routing_reasons || [],\n    review_status: f.review_required ? 'needs_review' : 'auto',\n    suggested_response: f.suggested_response,\n    response_grounded: f.response_grounded,\n    kb_source: f.kb_source,\n    llm_error: (f.llm || {}).llm_error,\n    processing_duration_ms: f.processing_duration_ms,\n  };\n}\nconsole.log('[AUDIT] ' + JSON.stringify(row));\nreturn [{ json: { ...i, audit_row: row } }];\n"
       }
     },
     {
-      "id": "aea128d7-04d0-433d-96ed-0ca461e274c5",
+      "id": "0bf4c8c3-f1bb-45f2-a56f-1a483daec73c",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,

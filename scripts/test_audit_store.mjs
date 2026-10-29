@@ -7,6 +7,7 @@ import {
   appendReviewUpdate,
   pruneAuditEvents,
   readAuditState,
+  readAuditStats,
   storePath,
 } from "../frontend/lib/audit-store.mjs";
 
@@ -162,7 +163,48 @@ try {
   assert.equal(migrated.rows[0].review_status, "resolved");
   await rm(legacyDir, { recursive: true, force: true });
 
-  console.log("audit store: 30 assertions passed");
+  // New fields: unit, routing_reasons, KB grounding metadata, suggested_response.
+  await appendAuditRow({
+    request_id: "req-fields",
+    source: "demo_ui",
+    unit: "retail",
+    sentiment: "negative",
+    category: "shipping",
+    urgency: "low",
+    summary: "Package late and tracking stuck",
+    routing_decision: "normal",
+    routing_reasons: ["all fields validated -> routine processing", "contact +6281234567 x in summary?"],
+    review_status: "auto",
+    suggested_response: "Shipping usually takes 3-5 days. Reach me at ops@example.com please.",
+    response_grounded: true,
+    kb_source: "kb-shipping-delays",
+    processing_duration_ms: 250,
+  });
+  const fielded = await readAuditState({ limit: 10 });
+  const fieldRow = fielded.rows.find((row) => row.request_id === "req-fields");
+  assert.equal(fieldRow.unit, "retail");
+  assert.deepEqual(
+    fieldRow.routing_reasons,
+    ["all fields validated -> routine processing", "contact [phone] x in summary?"],
+    "routing reasons should be stored as redacted strings"
+  );
+  assert.equal(fieldRow.response_grounded, true);
+  assert.equal(fieldRow.kb_source, "kb-shipping-delays");
+  assert.match(fieldRow.suggested_response, /\[email\]/, "suggested_response must be PII-redacted");
+
+  // Stats aggregation over the last 7 days (older fixture rows fall outside
+  // the window; only the fresh row above should be counted).
+  const stats = await readAuditStats({ days: 7 });
+  assert.equal(stats.total, 1);
+  assert.equal(stats.by_route.normal, 1);
+  assert.equal(stats.by_category.shipping, 1);
+  assert.equal(stats.by_unit.retail, 1);
+  assert.equal(stats.service.avg_processing_ms > 0, true);
+  assert.equal(stats.service.grounding_rate > 0, true);
+  assert.equal(stats.daily.length, 7);
+  assert.equal(stats.window_days, 7);
+
+  console.log("audit store: 41 assertions passed");
 } finally {
   await rm(dir, { recursive: true, force: true });
 }

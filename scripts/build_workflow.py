@@ -13,6 +13,7 @@ Writes: n8n/feedbackops_ai.json
 import json
 import sys
 import uuid
+from pathlib import Path
 
 CRED_ID = sys.argv[1] if len(sys.argv) > 1 else "REPLACE_WITH_GEMINI_CRED_ID"
 CRED_NAME = sys.argv[2] if len(sys.argv) > 2 else "Gemini API (header auth)"
@@ -21,6 +22,11 @@ WEBHOOK_CRED_NAME = sys.argv[4] if len(sys.argv) > 4 else "FeedbackOps Webhook A
 
 GEMINI_MODEL = "gemini-3.5-flash"
 MAX_FEEDBACK_LENGTH = 2000
+
+KB_ENTRIES = json.loads(
+    (Path(__file__).resolve().parent.parent / "samples" / "knowledge_base.json")
+    .read_text(encoding="utf-8")
+)["entries"]
 
 PROMPT_STATIC = (
     "You are the classification service of FeedbackOps AI. Treat the customer "
@@ -70,6 +76,7 @@ const problems = [];
 const isObj = body && typeof body === 'object' && !Array.isArray(body);
 let feedback = null;
 let source = 'unknown';
+let unit = null;
 let requestId = null;
 
 if (!isObj) {{
@@ -87,12 +94,23 @@ if (!isObj) {{
     if (typeof body.source !== 'string') problems.push('source_not_string');
     else source = body.source.slice(0, 64);
   }}
+  let unitDeclared = null;
+  if (body.unit !== undefined && body.unit !== null) {{
+    if (typeof body.unit !== 'string') problems.push('unit_not_string');
+    else {{
+      const u = body.unit.trim();
+      if (u.length === 0) unitDeclared = null;
+      else if (u.length > 64) problems.push('unit_exceeds_64_chars');
+      else unitDeclared = u;
+    }}
+  }}
   if (body.request_id !== undefined && body.request_id !== null) {{
     if (typeof body.request_id !== 'string') problems.push('request_id_not_string');
     else if (body.request_id.length > 128) problems.push('request_id_too_long');
     else requestId = body.request_id.trim();
-  }}
+    }}
 }}
+if (isObj) unit = unitDeclared;
 if (!requestId) {{
   requestId = (globalThis.crypto && crypto.randomUUID)
     ? crypto.randomUUID()
@@ -119,6 +137,7 @@ return [{{
     request_id: requestId,
     feedback,
     source,
+    unit,
     received_at: new Date().toISOString(),
   }},
 }}];
@@ -167,6 +186,7 @@ try {
 return [{ json: {
   request_id: ven.request_id,
   source: ven.source,
+  unit: ven.unit,
   received_at: ven.received_at,
   duration_ms,
   result,
@@ -175,21 +195,68 @@ return [{ json: {
 """
 
 ROUTING_CODE = """// Deterministic routing: pure rules, no LLM in the decision path.
+// This node also performs the mini-RAG retrieval that grounds suggested
+// responses for the normal route. It never calls any external service.
 const i = $json;
 const r = i.result || {};
+const reasons = [];
+
 let route;
-if (i.llm_error) route = 'review';
-else if (r.urgency === 'high') route = 'high_priority';
-else if (r.category === 'unknown' || r.sentiment === 'unknown' || r.urgency === 'unknown') route = 'review';
-else route = 'normal';
+if (i.llm_error) {
+  route = 'review';
+  reasons.push('llm_error -> safe review fallback (output not trusted)');
+}
+if (r.urgency === 'high' && !i.llm_error) {
+  route = 'high_priority';
+  reasons.push('urgency=high -> high-priority review queue');
+}
+if (!i.llm_error && route !== 'high_priority' && (r.category === 'unknown' || r.sentiment === 'unknown' || r.urgency === 'unknown')) {
+  route = 'review';
+  reasons.push('unknown classification field -> human review instead of a guess');
+}
+if (!route) {
+  route = 'normal';
+  reasons.push('all fields validated -> routine processing');
+}
+
+// Mini-RAG grounding (deterministic keyword retrieval over the embedded KB).
+const KB = KB_JSON_SLOTS;
+let kbSource = null;
+let grounded = false;
+let suggested_response = null;
+if (route === 'normal') {
+  const hay = String(i.feedback || '').toLowerCase();
+  const tokenSet = new Set(hay.match(/[a-z0-9]+/g) || []);
+  let best = null;
+  let bestScore = 0;
+  for (const entry of KB) {
+    let score = 0;
+    for (const kw of entry.keywords) {
+      if (kw.includes(' ')) { if (hay.includes(kw)) score += 3; }
+      else if (tokenSet.has(kw)) score += 2;
+    }
+    if (score > bestScore) { bestScore = score; best = entry; }
+  }
+  if (best && bestScore >= 3) {
+    grounded = true;
+    kbSource = best.id;
+    suggested_response =
+      'Thank you for your feedback. Reference: ' + best.title + ' — ' + best.guidance +
+      ' (ref ' + i.request_id + ')';
+  } else {
+    suggested_response =
+      'Thank you for your feedback. Our team has logged it (ref ' + i.request_id + ') and will follow up if needed.';
+  }
+}
 
 return [{ json: {
   ...i,
   routing_decision: route,
+  routing_reasons: reasons,
   review_required: route !== 'normal',
-  suggested_response: route === 'normal'
-    ? `Thank you for your feedback. Our team has logged it (ref ${i.request_id}) and will follow up if needed.`
-    : null,
+  suggested_response,
+  response_grounded: route === 'normal' ? grounded : null,
+  kb_source: grounded ? kbSource : null,
 }}];
 """
 
@@ -254,10 +321,14 @@ return [{ json: {
   final_response: {
     success: true,
     request_id: i.request_id,
+    unit: i.unit,
     result: i.result,
     routing_decision: i.routing_decision,
+    routing_reasons: i.routing_reasons,
     review_required: i.review_required,
     suggested_response: i.suggested_response,
+    response_grounded: i.response_grounded,
+    kb_source: i.kb_source,
     llm: { provider: 'gemini', model: 'GEMINI_MODEL_SLOTS', llm_error: i.llm_error },
     processing_duration_ms: i.duration_ms,
     error: null,
@@ -295,7 +366,9 @@ if (!i.final_response) {
     request_id: i.final_response.request_id,
     created_at: new Date().toISOString(),
     source: i.source || null,
+    unit: i.unit || null,
     status: 'rejected_pre_llm',
+    routing_reasons: ['rejected before the LLM ran: ' + (i.problems || []).join(', ')],
     error_code: i.final_response.error.code,
   };
 } else {
@@ -304,12 +377,17 @@ if (!i.final_response) {
     request_id: f.request_id,
     created_at: new Date().toISOString(),
     source: i.source || null,
+    unit: i.unit || null,
     sentiment: (f.result || {}).sentiment,
     category: (f.result || {}).category,
     urgency: (f.result || {}).urgency,
     summary: (f.result || {}).summary,
     routing_decision: f.routing_decision,
+    routing_reasons: f.routing_reasons || [],
     review_status: f.review_required ? 'needs_review' : 'auto',
+    suggested_response: f.suggested_response,
+    response_grounded: f.response_grounded,
+    kb_source: f.kb_source,
     llm_error: (f.llm || {}).llm_error,
     processing_duration_ms: f.processing_duration_ms,
   };
@@ -406,8 +484,8 @@ nodes = [
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [960, 140],
-        "parameters": {"jsCode": ROUTING_CODE},
-        "notes": "The LLM proposes; THIS node disposes. Business rules live here only.",
+        "parameters": {"jsCode": ROUTING_CODE.replace("KB_JSON_SLOTS", json.dumps(KB_ENTRIES))},
+        "notes": "The LLM proposes; THIS node disposes. Business rules live here only. Also performs the deterministic mini-RAG retrieval over the embedded knowledge base to ground suggested responses for the normal route.",
     },
     {
         "id": str(uuid.uuid4()),

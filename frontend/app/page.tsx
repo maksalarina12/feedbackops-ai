@@ -8,6 +8,7 @@ type Severity = "normal" | "high_priority" | "review";
 interface Result {
   success: boolean;
   request_id: string;
+  unit?: string | null;
   result?: {
     sentiment: string;
     category: string;
@@ -15,8 +16,11 @@ interface Result {
     summary: string;
   };
   routing_decision?: string;
+  routing_reasons?: string[] | null;
   review_required?: boolean;
   suggested_response?: string | null;
+  response_grounded?: boolean | null;
+  kb_source?: string | null;
   llm?: { provider: string; model: string; llm_error: string | null };
   processing_duration_ms?: number;
   error?: { code: string; message: string; problems?: string[] } | null;
@@ -83,24 +87,28 @@ const severityBadge = (route: Severity): { bg: string; fg: string } =>
 
 export default function Home() {
   const [feedback, setFeedback] = useState("");
+  const [unit, setUnit] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const submit = useCallback(async (text: string) => {
+  const submit = useCallback(async (text: string, unitTag: string = "") => {
     setLoading(true);
     setError(null);
     setResult(null);
     try {
+      const body: Record<string, unknown> = {
+        feedback: text,
+        source: "demo_ui",
+        request_id: `ui-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      };
+      const trimmedUnit = unitTag.trim();
+      if (trimmedUnit) body.unit = trimmedUnit;
       const res = await fetch("/api/triage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          feedback: text,
-          source: "demo_ui",
-          request_id: `ui-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        }),
+        body: JSON.stringify(body),
       });
       const data: Result = await res.json();
       setResult(data);
@@ -132,12 +140,20 @@ export default function Home() {
             queue, never silently passed.
           </p>
         </div>
-        <Link
-          href="/review"
-          style={{ color: "#101318", fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 12px", whiteSpace: "nowrap" }}
-        >
-          Review queue &rarr;
-        </Link>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <Link
+            href="/stats"
+            style={{ color: "#101318", fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 12px", whiteSpace: "nowrap" }}
+          >
+            Stats
+          </Link>
+          <Link
+            href="/review"
+            style={{ color: "#101318", fontSize: 13, fontWeight: 600, textDecoration: "none", border: "1px solid #d1d5db", borderRadius: 8, padding: "8px 12px", whiteSpace: "nowrap" }}
+          >
+            Review queue &rarr;
+          </Link>
+        </div>
       </header>
 
       <section style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 18 }}>
@@ -152,9 +168,21 @@ export default function Home() {
           rows={4}
           style={{ width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: 8, padding: 10, fontSize: 14, resize: "vertical" }}
         />
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+          <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600 }}>
+            Unit (optional){" "}
+            <input
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              maxLength={64}
+              placeholder="e.g. retail, logistics"
+              style={{ marginLeft: 6, border: "1px solid #d1d5db", borderRadius: 6, padding: "5px 8px", fontSize: 12, width: 170 }}
+            />
+          </label>
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
           <button
-            onClick={() => submit(feedback)}
+            onClick={() => submit(feedback, unit)}
             disabled={loading || feedback.length === 0}
             style={{ background: loading || 0 === feedback.length ? "#9ca3af" : "#101318", color: "#fff", border: 0, borderRadius: 8, padding: "9px 18px", fontSize: 14, fontWeight: 600, cursor: loading || feedback.length === 0 ? "not-allowed" : "pointer" }}
           >
@@ -172,7 +200,7 @@ export default function Home() {
               key={s.label}
               onClick={() => {
                 setFeedback(s.text);
-                submit(s.text);
+                submit(s.text, unit);
               }}
               disabled={loading}
               style={{ border: "1px solid #d1d5db", background: "#fff", borderRadius: 999, padding: "6px 13px", fontSize: 12, cursor: loading ? "wait" : "pointer" }}
@@ -224,7 +252,27 @@ export default function Home() {
                     auto-processed
                   </span>
                 )}
+                {result.unit ? (
+                  <span style={{ background: "#eef1f4", color: "#384151", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                    unit: {result.unit}
+                  </span>
+                ) : null}
+                {result.response_grounded === true && result.kb_source ? (
+                  <span style={{ background: "#e8f1fb", color: "#1e4e8c", borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>
+                    grounded from KB: {result.kb_source}
+                  </span>
+                ) : null}
               </div>
+              {Array.isArray(result.routing_reasons) && result.routing_reasons.length > 0 && (
+                <div style={{ marginTop: 12, color: "#4b5563", fontSize: 12, lineHeight: 1.6 }}>
+                  <b>Routed because:</b>
+                  <ul style={{ margin: "4px 0 0 18px", padding: 0 }}>
+                    {result.routing_reasons.map((reason, index) => (
+                      <li key={index}>{reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 14 }}>
                 <div>
                   <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>SENTIMENT</div>
