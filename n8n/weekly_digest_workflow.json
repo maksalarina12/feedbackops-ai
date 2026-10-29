@@ -2,7 +2,7 @@
   "name": "FeedbackOps AI - Weekly Digest",
   "nodes": [
     {
-      "id": "886b55ed-c873-4af1-b4a4-0a360e1adf3a",
+      "id": "d77edcbb-67be-433c-8def-c824efbbed79",
       "name": "Weekly Schedule",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
@@ -23,7 +23,7 @@
       "notes": "Every Monday at 08:00 in the instance timezone."
     },
     {
-      "id": "f7fca2cc-eda3-4f0e-92c0-db553347ee1f",
+      "id": "56b5cba8-da12-494a-878a-da0758eb7cca",
       "name": "Prepare Digest Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -36,7 +36,7 @@
       }
     },
     {
-      "id": "de598963-fbb0-4c98-8b87-c93ed60f9088",
+      "id": "c1d56811-9634-4dbe-a4c7-ab8da4e2a410",
       "name": "Fetch Executions",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -62,7 +62,7 @@
       "notes": "Header Auth credential: X-N8N-API-KEY = your n8n API key."
     },
     {
-      "id": "c8e19bbc-6fb0-4580-bacc-742b73faf9de",
+      "id": "47a08fc8-805b-4598-8ed0-ada0b6063ade",
       "name": "Build Digest",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -75,7 +75,7 @@
       }
     },
     {
-      "id": "f3df23d3-01d0-4e54-97fe-21c62950e88c",
+      "id": "a76ac5a2-de53-4ee3-aef7-b1ff6d54bd46",
       "name": "Digest Slack Enabled?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -108,7 +108,7 @@
       }
     },
     {
-      "id": "63d1b728-95e7-4e0e-83a1-6a196c76006b",
+      "id": "3f18753f-165f-423b-b080-9033cdd105c7",
       "name": "Post Digest to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -130,7 +130,7 @@
       "alwaysOutputData": true
     },
     {
-      "id": "9854cd77-5d4d-44f4-afbc-0de8099d6cca",
+      "id": "40f6df30-48c2-4ac1-8715-0717e5a03cd6",
       "name": "Digest Log",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,

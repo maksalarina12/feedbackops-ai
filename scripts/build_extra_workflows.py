@@ -67,6 +67,29 @@ const text = [
   `summary: ${summary || '(none provided)'}`,
 ].join('\\n');
 
+// Interactive human-in-the-loop buttons. The callback URL is configured once
+// in the Slack app settings (Request URL) and must point at
+// /api/slack/actions; Slack signs each callback so the endpoint can verify it.
+const blocks = [
+  { type: 'section', text: { type: 'mrkdwn', text } },
+  {
+    type: 'actions',
+    elements: [
+      {
+        type: 'button',
+        style: 'primary',
+        text: { type: 'plain_text', text: 'Mark resolved' },
+        value: `resolve:${requestId}`,
+      },
+      {
+        type: 'button',
+        text: { type: 'plain_text', text: 'Keep for review' },
+        value: `needs_review:${requestId}`,
+      },
+    ],
+  },
+];
+
 return [{ json: {
   valid: problems.length === 0,
   problems,
@@ -77,6 +100,7 @@ return [{ json: {
   slack_enabled: slackUrl !== '',
   slack_url: slackUrl,
   text,
+  blocks,
 }}];
 """
 
@@ -269,7 +293,7 @@ escalation_nodes = [
             "url": "={{ $json.slack_url }}",
             "sendBody": True,
             "specifyBody": "json",
-            "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+            "jsonBody": "={{ JSON.stringify($json.blocks ? { text: $json.text, blocks: $json.blocks } : { text: $json.text }) }}",
             "options": {"timeout": 10000},
         },
         "onError": "continueRegularOutput",

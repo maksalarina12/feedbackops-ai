@@ -45,6 +45,7 @@ services:
       - REVIEW_USERS=${REVIEW_USERS:-}
       - REVIEW_PASSWORD=${REVIEW_PASSWORD:-}
       - REVIEW_SESSION_SECRET=${REVIEW_SESSION_SECRET:-}
+      - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET:-}
     volumes:
       - frontend_data:/app/.data
     depends_on:

@@ -2,7 +2,7 @@
   "name": "FeedbackOps AI - Escalation Notifier",
   "nodes": [
     {
-      "id": "bce0c881-e309-4210-b13a-801f47139a2e",
+      "id": "9cd9f764-f5c8-45de-b134-98b7058c7cb8",
       "name": "Escalation Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
@@ -10,7 +10,7 @@
         0,
         240
       ],
-      "webhookId": "bc694c76-364a-4eb2-a7b8-aaf802886471",
+      "webhookId": "60d70483-9380-4ddf-91e7-5865fb261e46",
       "parameters": {
         "httpMethod": "POST",
         "path": "feedbackops-escalation",
@@ -27,7 +27,7 @@
       "notes": "Called by the main triage workflow when ESCALATION_WEBHOOK_URL is set."
     },
     {
-      "id": "3d0a100f-6be4-4f0e-be6d-bb88d3d72e3e",
+      "id": "fc80db4f-bd65-4e41-b385-b9eef0310b51",
       "name": "Validate Escalation",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -36,11 +36,11 @@
         240
       ],
       "parameters": {
-        "jsCode": "// Validate the escalation payload. Never trust inter-workflow input.\nconst body = $json.body ?? null;\nconst problems = [];\nconst isObj = body && typeof body === 'object' && !Array.isArray(body);\nlet requestId = 'unknown';\nlet route = 'review';\nlet summary = '';\nlet source = 'unknown';\n\nif (!isObj) {\n  problems.push('invalid_body');\n} else {\n  if (typeof body.request_id !== 'string' || body.request_id.trim() === '') {\n    problems.push('request_id_missing');\n  } else {\n    requestId = body.request_id.trim().slice(0, 128);\n  }\n  if (typeof body.routing_decision !== 'string') {\n    problems.push('routing_decision_missing');\n  } else {\n    route = body.routing_decision.trim().slice(0, 32);\n  }\n  if (body.source && typeof body.source === 'string') source = body.source.slice(0, 64);\n  if (body.result && typeof body.result.summary === 'string') {\n    summary = body.result.summary.slice(0, 300);\n  }\n}\n\nlet slackUrl = '';\ntry {\n  slackUrl = (typeof $env !== 'undefined' && $env.SLACK_WEBHOOK_URL)\n    ? String($env.SLACK_WEBHOOK_URL).trim()\n    : '';\n} catch (e) {\n  slackUrl = '';\n}\n\nconst icon = route === 'high_priority' ? ':rotating_light:' : ':mag:';\nconst text = [\n  `${icon} *FeedbackOps escalation*`,\n  `route: ${route}`,\n  `request: ${requestId}`,\n  `source: ${source}`,\n  `summary: ${summary || '(none provided)'}`,\n].join('\\n');\n\nreturn [{ json: {\n  valid: problems.length === 0,\n  problems,\n  request_id: requestId,\n  route,\n  source,\n  summary,\n  slack_enabled: slackUrl !== '',\n  slack_url: slackUrl,\n  text,\n}}];\n"
+        "jsCode": "// Validate the escalation payload. Never trust inter-workflow input.\nconst body = $json.body ?? null;\nconst problems = [];\nconst isObj = body && typeof body === 'object' && !Array.isArray(body);\nlet requestId = 'unknown';\nlet route = 'review';\nlet summary = '';\nlet source = 'unknown';\n\nif (!isObj) {\n  problems.push('invalid_body');\n} else {\n  if (typeof body.request_id !== 'string' || body.request_id.trim() === '') {\n    problems.push('request_id_missing');\n  } else {\n    requestId = body.request_id.trim().slice(0, 128);\n  }\n  if (typeof body.routing_decision !== 'string') {\n    problems.push('routing_decision_missing');\n  } else {\n    route = body.routing_decision.trim().slice(0, 32);\n  }\n  if (body.source && typeof body.source === 'string') source = body.source.slice(0, 64);\n  if (body.result && typeof body.result.summary === 'string') {\n    summary = body.result.summary.slice(0, 300);\n  }\n}\n\nlet slackUrl = '';\ntry {\n  slackUrl = (typeof $env !== 'undefined' && $env.SLACK_WEBHOOK_URL)\n    ? String($env.SLACK_WEBHOOK_URL).trim()\n    : '';\n} catch (e) {\n  slackUrl = '';\n}\n\nconst icon = route === 'high_priority' ? ':rotating_light:' : ':mag:';\nconst text = [\n  `${icon} *FeedbackOps escalation*`,\n  `route: ${route}`,\n  `request: ${requestId}`,\n  `source: ${source}`,\n  `summary: ${summary || '(none provided)'}`,\n].join('\\n');\n\n// Interactive human-in-the-loop buttons. The callback URL is configured once\n// in the Slack app settings (Request URL) and must point at\n// /api/slack/actions; Slack signs each callback so the endpoint can verify it.\nconst blocks = [\n  { type: 'section', text: { type: 'mrkdwn', text } },\n  {\n    type: 'actions',\n    elements: [\n      {\n        type: 'button',\n        style: 'primary',\n        text: { type: 'plain_text', text: 'Mark resolved' },\n        value: `resolve:${requestId}`,\n      },\n      {\n        type: 'button',\n        text: { type: 'plain_text', text: 'Keep for review' },\n        value: `needs_review:${requestId}`,\n      },\n    ],\n  },\n];\n\nreturn [{ json: {\n  valid: problems.length === 0,\n  problems,\n  request_id: requestId,\n  route,\n  source,\n  summary,\n  slack_enabled: slackUrl !== '',\n  slack_url: slackUrl,\n  text,\n  blocks,\n}}];\n"
       }
     },
     {
-      "id": "e26149e9-fa9a-4089-a523-8e3fb146e5c0",
+      "id": "148fd5f4-74a7-4111-a4f6-f6884f400291",
       "name": "Escalation Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -73,7 +73,7 @@
       }
     },
     {
-      "id": "9cf6159e-658e-4676-a766-941c9a249bb3",
+      "id": "70c13af7-4582-4613-9cd7-45e67e5c94e8",
       "name": "Slack Enabled?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
@@ -106,7 +106,7 @@
       }
     },
     {
-      "id": "71f5bd9c-5a0c-468c-b93e-446545cc7d19",
+      "id": "127c5d83-89a7-4448-872b-316ed00da565",
       "name": "Post to Slack",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -119,7 +119,7 @@
         "url": "={{ $json.slack_url }}",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ text: $json.text }) }}",
+        "jsonBody": "={{ JSON.stringify($json.blocks ? { text: $json.text, blocks: $json.blocks } : { text: $json.text }) }}",
         "options": {
           "timeout": 10000
         }
@@ -129,7 +129,7 @@
       "notes": "Optional channel. Without SLACK_WEBHOOK_URL the workflow still responds."
     },
     {
-      "id": "ff139b14-c068-4b85-bb35-876db766d9c4",
+      "id": "39038a01-461a-4a33-a36d-ec8955e8d69a",
       "name": "Build Escalation Result",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -142,7 +142,7 @@
       }
     },
     {
-      "id": "b45b2709-6c9f-4b21-9e26-f85ca9c97228",
+      "id": "b34aa755-fb74-43ec-8074-3508f1d55b86",
       "name": "Respond to Escalation",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,

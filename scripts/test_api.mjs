@@ -195,7 +195,15 @@ try {
   }
   assert.equal(last.status, 429);
 
-  console.log("api integration: 25 assertions passed");
+  const slackUnconfigured = await request("/api/slack/actions", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "payload=%7B%7D",
+  });
+  assert.equal(slackUnconfigured.status, 503);
+  assert.equal((await slackUnconfigured.json()).error, "not_configured");
+
+  console.log("api integration: 27 assertions passed");
 } finally {
   stop();
   await new Promise((resolve) => setTimeout(resolve, 300));
